@@ -1,0 +1,17 @@
+[package]
+name = "pouch"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0.204", features = ["derive"] }
+serde_json = "1.0.122"
+tokio = { version = "1.39.2", features = ["full"] }
+
+[profile.release]
+lto = true
+debug = "none"
+overflow-checks = true
+opt-level = 3
+strip = "symbols"
+debug-assertions = false

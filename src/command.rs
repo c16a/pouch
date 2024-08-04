@@ -45,6 +45,7 @@ pub(crate) enum Command {
     },
     SAdd { key: String, values: Vec<String> },
     SCard { key: String },
+    SInter { key: String, others: Vec<String> },
 }
 
 impl Command {
@@ -206,6 +207,18 @@ impl Command {
                 if parts.len() == 2 {
                     Some(Command::SCard {
                         key: parts[1].to_string(),
+                    })
+                } else {
+                    None
+                }
+            }
+            "SINTER" => {
+                if parts.len() >= 3 {
+                    let mut values = Vec::new();
+                    parts[2..].iter().for_each(|s| values.push(s.to_string()));
+                    Some(Command::SInter {
+                        key: parts[1].to_string(),
+                        others: values,
                     })
                 } else {
                     None

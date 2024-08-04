@@ -5,7 +5,7 @@ use dashmap::DashMap;
 
 use crate::command::Command;
 use crate::processor::Processor;
-use crate::response::{Response, FALSE, INCOMPATIBLE_DATA_TYPE, OK, TRUE, UNKNOWN_KEY};
+use crate::response::{FALSE, INCOMPATIBLE_DATA_TYPE, OK, Response, TRUE, UNKNOWN_KEY};
 use crate::wal::WAL;
 
 enum DbValue {
@@ -248,6 +248,52 @@ impl InMemoryDb {
         }
     }
 
+    fn get_set(&self, key: &String) -> Option<HashSet<String>> {
+        match self.data.get(key) {
+            Some(item) => {
+                match item.value() {
+                    DbValue::Set(set) => {
+                        Some(set.clone())
+                    }
+                    _ => None
+                }
+            }
+            _ => None
+        }
+    }
+
+    fn sinter(&self, key: &String, others: &Vec<String>) -> Response {
+        match self.data.get(&key.clone()) {
+            Some(db_value) => match db_value.value() {
+                DbValue::Set(set) => {
+                    let mut intersection = set.clone();
+                    for other_key in others {
+                        if let Some(other_set) = self.get_set(other_key) {
+                            // Perform the intersection and collect into a new HashSet
+                            intersection = intersection
+                                .intersection(&other_set)
+                                .cloned()
+                                .collect();
+                        } else {
+                            // If any other set is missing, the intersection is empty
+                            intersection.clear();
+                            break;
+                        }
+                    }
+                    Response::Set {
+                        values: intersection.into_iter().collect(),
+                    }
+                }
+                _ => Response::SimpleString {
+                    value: String::from(INCOMPATIBLE_DATA_TYPE),
+                },
+            },
+            None => Response::SimpleString {
+                value: String::from(UNKNOWN_KEY),
+            },
+        }
+    }
+
     fn incr(&self, key: &String) -> Response {
         if let Some(db_value) = self.data.get(key) {
             match db_value.value() {
@@ -358,6 +404,9 @@ impl Processor for InMemoryDb {
             }
             Command::SCard { ref key } => {
                 self.scard(&key)
+            }
+            Command::SInter { ref key, ref others } => {
+                self.sinter(key, others)
             }
         }
     }

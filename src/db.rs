@@ -5,17 +5,15 @@ use dashmap::DashMap;
 
 use crate::command::Command;
 use crate::processor::Processor;
-use crate::response::{FALSE, INCOMPATIBLE_DATA_TYPE, OK, Response, TRUE, UNKNOWN_KEY};
+use crate::response::{Response, FALSE, INCOMPATIBLE_DATA_TYPE, OK, TRUE, UNKNOWN_KEY};
 use crate::wal::WAL;
 
-#[derive(Debug, Clone)]
 enum DbValue {
     String(String),
     List(Vec<String>),
     Set(HashSet<String>),
 }
 
-#[derive(Clone)]
 pub(crate) struct InMemoryDb {
     data: DashMap<String, DbValue>,
 }
@@ -202,6 +200,54 @@ impl InMemoryDb {
         }
     }
 
+    fn sadd(&self, key: &String, values: &Vec<String>) -> Response {
+        match self.data.get_mut(&key.clone()) {
+            Some(mut db_value) => match db_value.value_mut() {
+                DbValue::Set(set) => {
+                    values.into_iter().for_each(|value| {
+                        set.insert(value.to_string());
+                    });
+                    Response::SimpleString {
+                        value: String::from(OK),
+                    }
+                }
+                _ => Response::SimpleString {
+                    value: String::from(INCOMPATIBLE_DATA_TYPE),
+                },
+            },
+            None => {
+                let mut set = HashSet::new();
+                values.into_iter().for_each(|value| {
+                    set.insert(value.to_string());
+                });
+                self.data
+                    .insert(key.to_string(), DbValue::Set(set));
+                Response::SimpleString {
+                    value: String::from(OK),
+                }
+            }
+        }
+    }
+
+    fn scard(&self, key: &String) -> Response {
+        match self.data.get(&key.clone()) {
+            Some(db_value) => match db_value.value() {
+                DbValue::Set(set) => {
+                    let len = set.len();
+                    Response::SimpleString {
+                        value: len.to_string(),
+                    }
+                }
+                _ => Response::SimpleString {
+                    value: String::from(INCOMPATIBLE_DATA_TYPE),
+                },
+            },
+            None => Response::SimpleString {
+                value: String::from(UNKNOWN_KEY),
+            },
+        }
+    }
+
     fn incr(&self, key: &String) -> Response {
         if let Some(db_value) = self.data.get(key) {
             match db_value.value() {
@@ -304,6 +350,15 @@ impl Processor for InMemoryDb {
             Command::Exists { ref key } => self.exists(key),
             Command::Incr { ref key } => self.incr(key),
             Command::Decr { ref key } => self.decr(key),
+            Command::SAdd { ref key, ref values } => {
+                if let Some(wal) = wal {
+                    wal.log(&cmd).unwrap()
+                }
+                self.sadd(&key, &values)
+            }
+            Command::SCard { ref key } => {
+                self.scard(&key)
+            }
         }
     }
 }

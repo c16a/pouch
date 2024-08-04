@@ -20,6 +20,7 @@ impl Response {
     }
 }
 
+pub(crate) const UNKNOWN_COMMAND: &str = "(error) unknown command";
 pub(crate) const UNKNOWN_KEY: &str = "(error) unknown key";
 pub(crate) const OK: &str = "OK";
 pub(crate) const TRUE: &str = "true";

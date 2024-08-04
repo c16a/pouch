@@ -1,8 +1,6 @@
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, Error, ErrorKind, Result, Write};
 
-use tokio::io;
-
 use crate::command::Command;
 use crate::db::InMemoryDb;
 use crate::processor::Processor;
@@ -21,14 +19,14 @@ impl WAL {
         Ok(WAL { file })
     }
 
-    pub(crate) fn log(&mut self, cmd: &Command) -> io::Result<()> {
+    pub(crate) fn log(&mut self, cmd: &Command) -> Result<()> {
         let serialised = serde_json::to_string(cmd).unwrap();
         writeln!(self.file, "{}", serialised)?;
         self.file.flush().expect("failed to write WAL entry");
         Ok(())
     }
 
-    pub(crate) fn replay(&self, db: &mut InMemoryDb) -> io::Result<usize> {
+    pub(crate) fn replay(&self, db: &mut InMemoryDb) -> Result<usize> {
         let metadata = &self.file.metadata()?;
         if metadata.len() == 0 {
             return Err(Error::new(ErrorKind::InvalidData, "WAL file is empty"));

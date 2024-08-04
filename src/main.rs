@@ -10,6 +10,7 @@ use wal::WAL;
 
 use crate::db::InMemoryDb;
 use crate::processor::Processor;
+use crate::response::{Response, UNKNOWN_COMMAND};
 
 mod command;
 mod db;
@@ -73,8 +74,13 @@ async fn process(mut socket: TcpStream, db: Arc<RwLock<dyn Processor>>, wal: Arc
         };
 
         let response = match Command::from_slice(&buf[..n]) {
-            None => continue,
-            Some(cmd) => db.write().await.cmd(cmd, Some(wal.write().await.deref_mut())),
+            None => Response::SimpleString {
+                value: String::from(UNKNOWN_COMMAND),
+            },
+            Some(cmd) => db
+                .write()
+                .await
+                .cmd(cmd, Some(wal.write().await.deref_mut())),
         };
 
         socket

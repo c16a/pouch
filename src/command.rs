@@ -43,6 +43,8 @@ pub(crate) enum Command {
     Decr {
         key: String,
     },
+    SAdd { key: String, values: Vec<String> },
+    SCard { key: String },
 }
 
 impl Command {
@@ -188,8 +190,28 @@ impl Command {
                     None
                 }
             }
-            _ => None, // KEYS - checks for all keys that match a pattern
-                       // DBSIZE - checks for number of keys
+            "SADD" => {
+                if parts.len() >= 3 {
+                    let mut values = Vec::new();
+                    parts[2..].iter().for_each(|s| values.push(s.to_string()));
+                    Some(Command::SAdd {
+                        key: parts[1].to_string(),
+                        values,
+                    })
+                } else {
+                    None
+                }
+            }
+            "SCARD" => {
+                if parts.len() == 2 {
+                    Some(Command::SCard {
+                        key: parts[1].to_string(),
+                    })
+                } else {
+                    None
+                }
+            }
+            _ => None
         }
     }
 }

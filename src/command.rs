@@ -10,15 +10,15 @@ pub(crate) enum Command {
         value: String,
     },
     Delete {
-        key: String,
+        keys: Vec<String>,
     },
     LPush {
         key: String,
-        value: String,
+        values: Vec<String>,
     },
     RPush {
         key: String,
-        value: String,
+        values: Vec<String>,
     },
     LRange {
         key: String,
@@ -43,9 +43,21 @@ pub(crate) enum Command {
     Decr {
         key: String,
     },
-    SAdd { key: String, values: Vec<String> },
-    SCard { key: String },
-    SInter { key: String, others: Vec<String> },
+    SAdd {
+        key: String,
+        values: Vec<String>,
+    },
+    SCard {
+        key: String,
+    },
+    SInter {
+        key: String,
+        others: Vec<String>,
+    },
+    SDiff {
+        key: String,
+        others: Vec<String>,
+    },
 }
 
 impl Command {
@@ -82,30 +94,36 @@ impl Command {
                     None
                 }
             }
-            "DELETE" => {
-                if parts.len() == 2 {
+            "DEL" => {
+                if parts.len() >= 2 {
+                    let mut keys = Vec::new();
+                    parts[2..].iter().for_each(|s| keys.push(s.to_string()));
                     Some(Command::Delete {
-                        key: parts[1].to_string(),
+                        keys,
                     })
                 } else {
                     None
                 }
             }
             "LPUSH" => {
-                if parts.len() == 3 {
+                if parts.len() >= 3 {
+                    let mut values = Vec::new();
+                    parts[2..].iter().for_each(|s| values.push(s.to_string()));
                     Some(Command::LPush {
                         key: parts[1].to_string(),
-                        value: parts[2].to_string(),
+                        values,
                     })
                 } else {
                     None
                 }
             }
             "RPUSH" => {
-                if parts.len() == 3 {
+                if parts.len() >= 3 {
+                    let mut values = Vec::new();
+                    parts[2..].iter().for_each(|s| values.push(s.to_string()));
                     Some(Command::RPush {
                         key: parts[1].to_string(),
-                        value: parts[2].to_string(),
+                        values,
                     })
                 } else {
                     None
@@ -224,7 +242,19 @@ impl Command {
                     None
                 }
             }
-            _ => None
+            "SDIFF" => {
+                if parts.len() >= 3 {
+                    let mut values = Vec::new();
+                    parts[2..].iter().for_each(|s| values.push(s.to_string()));
+                    Some(Command::SDiff {
+                        key: parts[1].to_string(),
+                        others: values,
+                    })
+                } else {
+                    None
+                }
+            }
+            _ => None,
         }
     }
 }

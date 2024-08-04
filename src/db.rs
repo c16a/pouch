@@ -1,12 +1,13 @@
 use std::collections::HashSet;
 use std::io;
 
-use dashmap::DashMap;
-use dashmap::mapref::one::Ref;
 use crate::command::Command;
 use crate::processor::Processor;
-use crate::response::{FALSE, INCOMPATIBLE_DATA_TYPE, OK, Response, TRUE, UNKNOWN_KEY};
+use crate::response::Error::{IncompatibleDataType, NotInteger, UnknownKey};
+use crate::response::{Response, OK};
 use crate::wal::WAL;
+use dashmap::mapref::one::{Ref, RefMut};
+use dashmap::DashMap;
 
 enum DbValue {
     String(String),
@@ -28,156 +29,128 @@ impl InMemoryDb {
     fn get(&self, key: &String) -> Response {
         if let Some(db_value) = self.data.get(key) {
             match db_value.value() {
-                DbValue::String(value) => Response::SimpleString {
-                    value: value.to_string(),
-                },
-                _ => Response::SimpleString {
-                    value: String::from(INCOMPATIBLE_DATA_TYPE),
-                },
+                DbValue::String(value) => Response::String(value.to_string()),
+                _ => Response::Err(IncompatibleDataType),
             }
         } else {
-            Response::SimpleString {
-                value: String::from(UNKNOWN_KEY),
-            }
+            Response::Err(UnknownKey)
         }
     }
 
     fn exists(&self, key: &String) -> Response {
         let found = if self.data.contains_key(key) {
-            TRUE
+            1
         } else {
-            FALSE
+            0
         };
-        Response::SimpleString {
-            value: String::from(found),
-        }
+        Response::Integer(found)
     }
 
     fn set(&self, key: &String, value: &String) -> Response {
         self.data
             .insert(key.to_string(), DbValue::String(value.to_string()));
-        Response::SimpleString {
-            value: String::from(OK),
-        }
+        Response::String(String::from(OK))
     }
 
-    fn remove(&self, key: &String) -> Response {
-        self.data.remove(&key.to_string());
-        Response::SimpleString {
-            value: String::from(OK),
-        }
+    fn delete(&self, keys: &Vec<String>) -> Response {
+        let deleted_rows = keys.into_iter().fold(0, |acc, value| {
+            acc + match self.data.remove(&value.to_string()) {
+                Some(_) => 1,
+                None => 0
+            }
+        });
+        Response::Integer(deleted_rows)
     }
 
-    fn lpush(&self, key: &String, value: &String) -> Response {
+    fn lpush(&self, key: &String, values: &Vec<String>) -> Response {
         match self.data.get_mut(&key.clone()) {
             Some(mut db_value) => match db_value.value_mut() {
                 DbValue::List(list) => {
-                    list.insert(0, value.to_string());
-                    Response::SimpleString {
-                        value: String::from(OK),
-                    }
+                    values.into_iter().for_each(|value| {
+                        list.insert(0, value.to_string());
+                    });
+                    Response::Integer(list.len() as i32)
                 }
-                _ => Response::SimpleString {
-                    value: String::from(INCOMPATIBLE_DATA_TYPE),
-                },
+                _ => Response::Err(IncompatibleDataType),
             },
             None => {
-                self.data
-                    .insert(key.to_string(), DbValue::List(vec![value.to_string()]));
-                Response::SimpleString {
-                    value: String::from(OK),
-                }
+                let mut list = Vec::new();
+                values.into_iter().for_each(|value| {
+                    list.insert(0, value.to_string());
+                });
+                self.data.insert(key.to_string(), DbValue::List(list));
+                Response::Integer(values.len() as i32)
             }
         }
     }
 
-    fn rpush(&self, key: &String, value: &String) -> Response {
+    fn rpush(&self, key: &String, values: &Vec<String>) -> Response {
         match self.data.get_mut(&key.clone()) {
             Some(mut db_value) => match db_value.value_mut() {
                 DbValue::List(list) => {
-                    list.push(value.to_string());
-                    Response::SimpleString {
-                        value: String::from(OK),
-                    }
+                    values.into_iter().for_each(|value| {
+                        list.push(value.to_string())
+                    });
+                    Response::Integer(list.len() as i32)
                 }
-                _ => Response::SimpleString {
-                    value: String::from(INCOMPATIBLE_DATA_TYPE),
-                },
+                _ => Response::Err(IncompatibleDataType),
             },
             None => {
-                self.data
-                    .insert(key.to_string(), DbValue::List(vec![value.to_string()]));
-                Response::SimpleString {
-                    value: String::from(OK),
-                }
+                let list = values.to_vec();
+                self.data.insert(key.to_string(), DbValue::List(list));
+                Response::Integer(values.len() as i32)
             }
         }
     }
 
     fn lpop(&self, key: &String) -> Response {
-        match self.data.get_mut(&key.clone()) {
-            Some(mut db_value) => match db_value.value_mut() {
-                DbValue::List(list) => {
-                    let el = list.remove(0);
-                    Response::SimpleString {
-                        value: String::from(el),
-                    }
-                }
-                _ => Response::SimpleString {
-                    value: String::from(INCOMPATIBLE_DATA_TYPE),
-                },
-            },
-            None => Response::SimpleString {
-                value: String::from(UNKNOWN_KEY),
-            },
+        if let Some(mut list_ref) = self.get_list_ref_mut(&key) {
+            if let DbValue::List(list) = list_ref.value_mut() {
+                let el = list.remove(0);
+                Response::String(el)
+            } else {
+                Response::Err(IncompatibleDataType)
+            }
+        } else {
+            Response::Err(UnknownKey)
         }
     }
 
     fn rpop(&self, key: &String) -> Response {
-        match self.data.get_mut(&key.clone()) {
-            Some(mut db_value) => match db_value.value_mut() {
-                DbValue::List(list) => {
-                    let len = list.len();
-                    let el = list.remove(len - 1);
-                    Response::SimpleString {
-                        value: String::from(el),
-                    }
-                }
-                _ => Response::SimpleString {
-                    value: String::from(INCOMPATIBLE_DATA_TYPE),
-                },
-            },
-            None => Response::SimpleString {
-                value: String::from(UNKNOWN_KEY),
-            },
+        if let Some(mut list_ref) = self.get_list_ref_mut(&key) {
+            if let DbValue::List(list) = list_ref.value_mut() {
+                let len = list.len();
+                let el = list.remove(len - 1);
+                Response::String(el)
+            } else {
+                Response::Err(IncompatibleDataType)
+            }
+        } else {
+            Response::Err(UnknownKey)
         }
     }
 
     fn lrange(&self, key: &String, start: Option<usize>, end: Option<usize>) -> Response {
-        match self.data.get(&key.clone()) {
-            Some(db_value) => match db_value.value() {
-                DbValue::List(list) => {
-                    let len = list.len();
-                    let start = match start {
-                        Some(val) => val.min(len),
-                        None => 0,
-                    };
-                    let end = match end {
-                        Some(val) => val.min(len),
-                        None => len,
-                    };
-                    let range = &list[start..end];
-                    Response::List {
-                        values: range.to_vec(),
-                    }
+        if let Some(list_ref) = self.get_list_ref(&key) {
+            if let DbValue::List(list) = list_ref.value() {
+                let len = list.len();
+                let start = match start {
+                    Some(val) => val.min(len),
+                    None => 0,
+                };
+                let end = match end {
+                    Some(val) => val.min(len),
+                    None => len,
+                };
+                let range = &list[start..end];
+                Response::List {
+                    values: range.to_vec(),
                 }
-                _ => Response::SimpleString {
-                    value: String::from(INCOMPATIBLE_DATA_TYPE),
-                },
-            },
-            None => Response::SimpleString {
-                value: String::from(UNKNOWN_KEY),
-            },
+            } else {
+                Response::Err(IncompatibleDataType)
+            }
+        } else {
+            Response::Err(UnknownKey)
         }
     }
 
@@ -185,18 +158,12 @@ impl InMemoryDb {
         if let Some(list_ref) = self.get_list_ref(&key) {
             if let DbValue::List(list) = list_ref.value() {
                 let len = list.len();
-                Response::SimpleString {
-                    value: len.to_string(),
-                }
+                Response::Integer(len as i32)
             } else {
-                Response::SimpleString {
-                    value: String::from(INCOMPATIBLE_DATA_TYPE),
-                }
+                Response::Err(IncompatibleDataType)
             }
         } else {
-            Response::SimpleString {
-                value: String::from(UNKNOWN_KEY),
-            }
+            Response::Err(UnknownKey)
         }
     }
 
@@ -204,27 +171,20 @@ impl InMemoryDb {
         match self.data.get_mut(&key.clone()) {
             Some(mut db_value) => match db_value.value_mut() {
                 DbValue::Set(set) => {
-                    values.into_iter().for_each(|value| {
-                        set.insert(value.to_string());
+                    let inserted_rows = values.into_iter().fold(0, |acc, value| {
+                        acc + if set.insert(value.to_string()) { 1 } else { 0 }
                     });
-                    Response::SimpleString {
-                        value: String::from(OK),
-                    }
+                    Response::String(inserted_rows.to_string())
                 }
-                _ => Response::SimpleString {
-                    value: String::from(INCOMPATIBLE_DATA_TYPE),
-                },
+                _ => Response::Err(IncompatibleDataType),
             },
             None => {
                 let mut set = HashSet::new();
-                values.into_iter().for_each(|value| {
-                    set.insert(value.to_string());
+                let inserted_rows = values.into_iter().fold(0, |acc, value| {
+                    acc + if set.insert(value.to_string()) { 1 } else { 0 }
                 });
-                self.data
-                    .insert(key.to_string(), DbValue::Set(set));
-                Response::SimpleString {
-                    value: String::from(OK),
-                }
+                self.data.insert(key.to_string(), DbValue::Set(set));
+                Response::String(inserted_rows.to_string())
             }
         }
     }
@@ -233,18 +193,12 @@ impl InMemoryDb {
         if let Some(set_ref) = self.get_set_ref(&key) {
             if let DbValue::Set(set) = set_ref.value() {
                 let len = set.len();
-                Response::SimpleString {
-                    value: len.to_string(),
-                }
+                Response::String(len.to_string())
             } else {
-                Response::SimpleString {
-                    value: String::from(INCOMPATIBLE_DATA_TYPE),
-                }
+                Response::Err(IncompatibleDataType)
             }
         } else {
-            Response::SimpleString {
-                value: String::from(UNKNOWN_KEY),
-            }
+            Response::Err(UnknownKey)
         }
     }
 
@@ -258,12 +212,26 @@ impl InMemoryDb {
         }
     }
 
+    fn get_value_ref_mut<F>(&self, key: &String, is_variant: F) -> Option<RefMut<String, DbValue>>
+    where
+        F: Fn(&DbValue) -> bool,
+    {
+        match self.data.get_mut(key) {
+            Some(item) if is_variant(item.value()) => Some(item),
+            _ => None,
+        }
+    }
+
     fn get_set_ref(&self, key: &String) -> Option<Ref<String, DbValue>> {
         self.get_value_ref(key, |value| matches!(value, DbValue::Set(_)))
     }
 
     fn get_list_ref(&self, key: &String) -> Option<Ref<String, DbValue>> {
         self.get_value_ref(key, |value| matches!(value, DbValue::List(_)))
+    }
+
+    fn get_list_ref_mut(&self, key: &String) -> Option<RefMut<String, DbValue>> {
+        self.get_value_ref_mut(key, |value| matches!(value, DbValue::List(_)))
     }
 
     fn get_string_ref(&self, key: &String) -> Option<Ref<String, DbValue>> {
@@ -279,10 +247,8 @@ impl InMemoryDb {
                         if let Some(other_ref) = self.get_set_ref(other_key) {
                             if let DbValue::Set(other_set) = other_ref.value() {
                                 // Perform the intersection and collect into a new HashSet
-                                intersection = intersection
-                                    .intersection(&other_set)
-                                    .cloned()
-                                    .collect();
+                                intersection =
+                                    intersection.intersection(&other_set).cloned().collect();
                             }
                         } else {
                             // If any other set is missing, the intersection is empty
@@ -294,13 +260,31 @@ impl InMemoryDb {
                         values: intersection.into_iter().collect(),
                     }
                 }
-                _ => Response::SimpleString {
-                    value: String::from(INCOMPATIBLE_DATA_TYPE),
-                },
+                _ => Response::Err(IncompatibleDataType),
             },
-            None => Response::SimpleString {
-                value: String::from(UNKNOWN_KEY),
+            None => Response::Err(UnknownKey),
+        }
+    }
+
+    fn sdiff(&self, key: &String, others: &Vec<String>) -> Response {
+        match self.data.get(&key.clone()) {
+            Some(db_value) => match db_value.value() {
+                DbValue::Set(set) => {
+                    let mut difference = set.clone();
+                    for other_key in others {
+                        if let Some(other_ref) = self.get_set_ref(other_key) {
+                            if let DbValue::Set(other_set) = other_ref.value() {
+                                difference = difference.difference(&other_set).cloned().collect();
+                            }
+                        }
+                    }
+                    Response::Set {
+                        values: difference.into_iter().collect(),
+                    }
+                }
+                _ => Response::Err(IncompatibleDataType),
             },
+            None => Response::Err(UnknownKey),
         }
     }
 
@@ -311,22 +295,14 @@ impl InMemoryDb {
                     Ok(x) => {
                         let y = x + 1;
                         self.set(key, &y.to_string());
-                        Response::SimpleString {
-                            value: String::from(OK),
-                        }
+                        Response::String(y.to_string())
                     }
-                    Err(_err) => Response::SimpleString {
-                        value: String::from(INCOMPATIBLE_DATA_TYPE),
-                    },
+                    Err(_err) => Response::Err(NotInteger),
                 },
-                _ => Response::SimpleString {
-                    value: String::from(INCOMPATIBLE_DATA_TYPE),
-                },
+                _ => Response::Err(IncompatibleDataType),
             }
         } else {
-            Response::SimpleString {
-                value: String::from(UNKNOWN_KEY),
-            }
+            Response::Err(UnknownKey)
         }
     }
 
@@ -337,22 +313,14 @@ impl InMemoryDb {
                     Ok(x) => {
                         let y = x - 1;
                         self.set(key, &y.to_string());
-                        Response::SimpleString {
-                            value: String::from(OK),
-                        }
+                        Response::String(y.to_string())
                     }
-                    Err(_err) => Response::SimpleString {
-                        value: String::from(INCOMPATIBLE_DATA_TYPE),
-                    },
+                    Err(_err) => Response::Err(NotInteger),
                 },
-                _ => Response::SimpleString {
-                    value: String::from(INCOMPATIBLE_DATA_TYPE),
-                },
+                _ => Response::Err(IncompatibleDataType),
             }
         } else {
-            Response::SimpleString {
-                value: String::from(UNKNOWN_KEY),
-            }
+            Response::Err(UnknownKey)
         }
     }
 }
@@ -367,23 +335,23 @@ impl Processor for InMemoryDb {
                 }
                 self.set(key, value)
             }
-            Command::Delete { ref key } => {
+            Command::Delete { ref keys } => {
                 if let Some(wal) = wal {
                     wal.log(&cmd).unwrap()
                 }
-                self.remove(key)
+                self.delete(keys)
             }
-            Command::LPush { ref key, ref value } => {
+            Command::LPush { ref key, ref values } => {
                 if let Some(wal) = wal {
                     wal.log(&cmd).unwrap()
                 }
-                self.lpush(key, value)
+                self.lpush(key, values)
             }
-            Command::RPush { ref key, ref value } => {
+            Command::RPush { ref key, ref values } => {
                 if let Some(wal) = wal {
                     wal.log(&cmd).unwrap()
                 }
-                self.rpush(key, value)
+                self.rpush(key, values)
             }
             Command::LPop { ref key } => {
                 if let Some(wal) = wal {
@@ -406,18 +374,24 @@ impl Processor for InMemoryDb {
             Command::Exists { ref key } => self.exists(key),
             Command::Incr { ref key } => self.incr(key),
             Command::Decr { ref key } => self.decr(key),
-            Command::SAdd { ref key, ref values } => {
+            Command::SAdd {
+                ref key,
+                ref values,
+            } => {
                 if let Some(wal) = wal {
                     wal.log(&cmd).unwrap()
                 }
                 self.sadd(&key, &values)
             }
-            Command::SCard { ref key } => {
-                self.scard(&key)
-            }
-            Command::SInter { ref key, ref others } => {
-                self.sinter(key, others)
-            }
+            Command::SCard { ref key } => self.scard(&key),
+            Command::SInter {
+                ref key,
+                ref others,
+            } => self.sinter(key, others),
+            Command::SDiff {
+                ref key,
+                ref others,
+            } => self.sdiff(key, others),
         }
     }
 }
@@ -436,9 +410,7 @@ mod test {
 
         assert_eq!(
             response,
-            Response::SimpleString {
-                value: String::from(OK)
-            }
+            Response::String(String::from(OK))
         );
     }
 
@@ -452,13 +424,11 @@ mod test {
         let set_response = db.set(&key, &value);
         assert_eq!(
             set_response,
-            Response::SimpleString {
-                value: String::from(OK)
-            }
+            Response::String(String::from(OK))
         );
 
         let get_response = db.get(&key);
-        assert_eq!(get_response, Response::SimpleString { value });
+        assert_eq!(get_response, Response::String(value));
     }
 
     #[test]
@@ -471,28 +441,22 @@ mod test {
         let set_response = db.set(&key, &value);
         assert_eq!(
             set_response,
-            Response::SimpleString {
-                value: String::from(OK)
-            }
+            Response::String(String::from(OK))
         );
 
         let get_response = db.get(&key);
-        assert_eq!(get_response, Response::SimpleString { value });
+        assert_eq!(get_response, Response::String(value));
 
-        let delete_response = db.remove(&key);
+        let delete_response = db.delete(&[String::from("name")].to_vec());
         assert_eq!(
             delete_response,
-            Response::SimpleString {
-                value: String::from(OK)
-            }
+            Response::String(String::from(OK))
         );
 
-        let get_response = db.get(&key);
+        let get_response = db.get(&String::from("name"));
         assert_eq!(
             get_response,
-            Response::SimpleString {
-                value: String::from(UNKNOWN_KEY)
-            }
+            Response::Err(UnknownKey)
         );
     }
 
@@ -506,15 +470,16 @@ mod test {
         let mango = String::from("mango");
         let orange = String::from("orange");
 
-        let apple_lpush_response = db.lpush(&key, &apple);
+        let apple_lpush_response = db.lpush(&key, &[apple].to_owned().to_vec());
         assert_eq!(
             apple_lpush_response,
-            Response::SimpleString {
-                value: String::from(OK)
-            }
+            Response::Integer(1)
         );
 
         let llen_response = db.llen(&key);
-        assert_eq!(llen_response, Response::SimpleString { value: String::from("1") })
+        assert_eq!(
+            llen_response,
+            Response::Integer(1)
+        )
     }
 }

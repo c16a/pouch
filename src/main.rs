@@ -1,6 +1,7 @@
 use std::env;
 use std::ops::DerefMut;
 use std::sync::Arc;
+
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::RwLock;
@@ -10,7 +11,8 @@ use wal::WAL;
 
 use crate::db::InMemoryDb;
 use crate::processor::Processor;
-use crate::response::{Response, UNKNOWN_COMMAND};
+use crate::response::Error::UnknownCommand;
+use crate::response::Response;
 
 mod command;
 mod db;
@@ -74,9 +76,7 @@ async fn process(mut socket: TcpStream, db: Arc<RwLock<dyn Processor>>, wal: Arc
         };
 
         let response = match Command::from_slice(&buf[..n]) {
-            None => Response::SimpleString {
-                value: String::from(UNKNOWN_COMMAND),
-            },
+            None => Response::Err(UnknownCommand),
             Some(cmd) => db
                 .write()
                 .await

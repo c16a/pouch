@@ -1,4 +1,5 @@
 use std::env;
+use std::ops::DerefMut;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -7,14 +8,14 @@ use tokio::sync::RwLock;
 use command::Command;
 use wal::WAL;
 
-use crate::db::{InMemoryDb};
+use crate::db::InMemoryDb;
 use crate::processor::Processor;
 
 mod command;
-mod wal;
-mod response;
 mod db;
 mod processor;
+mod response;
+mod wal;
 
 #[tokio::main]
 async fn main() {
@@ -22,7 +23,6 @@ async fn main() {
     let default_port = 6379;
     let default_wal_file = "wal.log".to_string();
 
-    // Get environment variables, with fallbacks to default values
     let port: u16 = env::var("PORT")
         .ok()
         .and_then(|p| p.parse().ok())
@@ -63,9 +63,7 @@ async fn process(mut socket: TcpStream, db: Arc<RwLock<dyn Processor>>, wal: Arc
     let mut buf = vec![0; 1024];
 
     loop {
-        let n = match socket
-            .read(&mut buf)
-            .await {
+        let n = match socket.read(&mut buf).await {
             Ok(n) if n == 0 => return,
             Ok(n) => n,
             Err(err) => {
@@ -76,42 +74,12 @@ async fn process(mut socket: TcpStream, db: Arc<RwLock<dyn Processor>>, wal: Arc
 
         let response = match Command::from_slice(&buf[..n]) {
             None => continue,
-            Some(cmd) => match cmd {
-                Command::Get { ref key } => {
-                    db.read().await.get(key)
-                }
-                Command::Set { ref key, ref value } => {
-                    wal.write().await.log(&cmd).unwrap();
-                    db.write().await.set(key, value)
-                }
-                Command::Delete { ref key } => {
-                    wal.write().await.log(&cmd).unwrap();
-                    db.write().await.remove(key)
-                }
-                Command::LPush { ref key, ref value } => {
-                    wal.write().await.log(&cmd).unwrap();
-                    db.write().await.lpush(key, value)
-                }
-                Command::RPush { ref key, ref value } => {
-                    wal.write().await.log(&cmd).unwrap();
-                    db.write().await.rpush(key, value)
-                }
-                Command::LRange { ref key, start, end } => {
-                    db.read().await.lrange(key, start, end)
-                }
-                Command::Exists { ref key } => {
-                    db.read().await.exists(key)
-                }
-                Command::Incr { ref key } => {
-                    db.write().await.incr(key)
-                }
-                Command::Decr { ref key } => {
-                    db.write().await.decr(key)
-                }
-            }
+            Some(cmd) => db.write().await.cmd(cmd, Some(wal.write().await.deref_mut())),
         };
 
-        socket.write_all(response.to_vec().as_slice()).await
+        socket
+            .write_all(response.to_vec().as_slice())
+            .await
             .expect("failed to write data to socket");
     }
 }

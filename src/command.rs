@@ -2,15 +2,47 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) enum Command {
-    Get { key: String },
-    Set { key: String, value: String },
-    Delete { key: String },
-    LPush { key: String, value: String },
-    RPush { key: String, value: String },
-    LRange { key: String, start: Option<usize>, end: Option<usize> },
-    Exists { key: String },
-    Incr { key: String },
-    Decr { key: String },
+    Get {
+        key: String,
+    },
+    Set {
+        key: String,
+        value: String,
+    },
+    Delete {
+        key: String,
+    },
+    LPush {
+        key: String,
+        value: String,
+    },
+    RPush {
+        key: String,
+        value: String,
+    },
+    LRange {
+        key: String,
+        start: Option<usize>,
+        end: Option<usize>,
+    },
+    LLen {
+        key: String,
+    },
+    LPop {
+        key: String,
+    },
+    RPop {
+        key: String,
+    },
+    Exists {
+        key: String,
+    },
+    Incr {
+        key: String,
+    },
+    Decr {
+        key: String,
+    },
 }
 
 impl Command {
@@ -30,35 +62,48 @@ impl Command {
         match parts[0] {
             "GET" => {
                 if parts.len() == 2 {
-                    Some(Command::Get { key: parts[1].to_string() })
+                    Some(Command::Get {
+                        key: parts[1].to_string(),
+                    })
                 } else {
                     None
                 }
             }
             "SET" => {
                 if parts.len() == 3 {
-                    Some(Command::Set { key: parts[1].to_string(), value: parts[2].to_string() })
+                    Some(Command::Set {
+                        key: parts[1].to_string(),
+                        value: parts[2].to_string(),
+                    })
                 } else {
                     None
                 }
             }
             "DELETE" => {
                 if parts.len() == 2 {
-                    Some(Command::Delete { key: parts[1].to_string() })
+                    Some(Command::Delete {
+                        key: parts[1].to_string(),
+                    })
                 } else {
                     None
                 }
             }
             "LPUSH" => {
                 if parts.len() == 3 {
-                    Some(Command::LPush { key: parts[1].to_string(), value: parts[2].to_string() })
+                    Some(Command::LPush {
+                        key: parts[1].to_string(),
+                        value: parts[2].to_string(),
+                    })
                 } else {
                     None
                 }
             }
             "RPUSH" => {
                 if parts.len() == 3 {
-                    Some(Command::RPush { key: parts[1].to_string(), value: parts[2].to_string() })
+                    Some(Command::RPush {
+                        key: parts[1].to_string(),
+                        value: parts[2].to_string(),
+                    })
                 } else {
                     None
                 }
@@ -73,13 +118,13 @@ impl Command {
                     if parts.len() >= 3 {
                         start = match parts[2].parse() {
                             Ok(val) => Some(val),
-                            Err(_err) => None
+                            Err(_err) => None,
                         };
 
                         if parts.len() >= 4 {
                             end = match parts[3].parse() {
                                 Ok(val) => Some(val),
-                                Err(_err) => None
+                                Err(_err) => None,
                             }
                         }
                     }
@@ -89,31 +134,62 @@ impl Command {
                     None
                 }
             }
+            "LLEN" => {
+                if parts.len() == 2 {
+                    Some(Command::LLen {
+                        key: parts[1].to_string(),
+                    })
+                } else {
+                    None
+                }
+            }
+            "LPOP" => {
+                if parts.len() == 2 {
+                    Some(Command::LPop {
+                        key: parts[1].to_string(),
+                    })
+                } else {
+                    None
+                }
+            }
+            "RPOP" => {
+                if parts.len() == 2 {
+                    Some(Command::RPop {
+                        key: parts[1].to_string(),
+                    })
+                } else {
+                    None
+                }
+            }
             "EXISTS" => {
                 if parts.len() == 2 {
-                    Some(Command::Exists { key: parts[1].to_string() })
+                    Some(Command::Exists {
+                        key: parts[1].to_string(),
+                    })
                 } else {
                     None
                 }
             }
             "INCR" => {
                 if parts.len() == 2 {
-                    Some(Command::Incr { key: parts[1].to_string() })
+                    Some(Command::Incr {
+                        key: parts[1].to_string(),
+                    })
                 } else {
                     None
                 }
             }
             "DECR" => {
                 if parts.len() == 2 {
-                    Some(Command::Decr { key: parts[1].to_string() })
+                    Some(Command::Decr {
+                        key: parts[1].to_string(),
+                    })
                 } else {
                     None
                 }
             }
-            _ => None
-            // EXISTS - checks for key
-            // KEYS - checks for all keys that match a pattern
-            // DBSIZE - checks for number of keys
+            _ => None, // KEYS - checks for all keys that match a pattern
+                       // DBSIZE - checks for number of keys
         }
     }
 }

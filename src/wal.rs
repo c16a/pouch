@@ -1,5 +1,5 @@
 use std::fs::{File, OpenOptions};
-use std::io::{BufRead, BufReader, Error, ErrorKind, Write, Result};
+use std::io::{BufRead, BufReader, Error, ErrorKind, Result, Write};
 
 use tokio::io;
 
@@ -13,7 +13,11 @@ pub(crate) struct WAL {
 
 impl WAL {
     pub(crate) fn new(path: &str) -> Result<WAL> {
-        let file = OpenOptions::new().create(true).append(true).read(true).open(path)?;
+        let file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .read(true)
+            .open(path)?;
         Ok(WAL { file })
     }
 
@@ -35,27 +39,7 @@ impl WAL {
         for line in reader.lines() {
             let line = line?;
             let cmd: Command = serde_json::from_str(&line).unwrap();
-            match cmd {
-                Command::Set { key, value } => {
-                    db.set(&key, &value);
-                }
-                Command::Delete { key } => {
-                    db.remove(&key);
-                }
-                Command::LPush { key, value } => {
-                    db.lpush(&key, &value);
-                }
-                Command::RPush { key, value } => {
-                    db.rpush(&key, &value);
-                }
-                Command::Incr { key } => {
-                    db.incr(&key);
-                }
-                Command::Decr { key } => {
-                    db.decr(&key);
-                }
-                _ => {} // Ignore other commands during replay
-            }
+            db.cmd(cmd, None);
             count += 1;
         }
         Ok(count)

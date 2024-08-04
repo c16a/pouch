@@ -8,6 +8,9 @@ pub(crate) enum Command {
     LPush { key: String, value: String },
     RPush { key: String, value: String },
     LRange { key: String, start: Option<usize>, end: Option<usize> },
+    Exists { key: String },
+    Incr { key: String },
+    Decr { key: String },
 }
 
 impl Command {
@@ -82,6 +85,27 @@ impl Command {
                     }
 
                     Some(Command::LRange { key, start, end })
+                } else {
+                    None
+                }
+            }
+            "EXISTS" => {
+                if parts.len() == 2 {
+                    Some(Command::Exists { key: parts[1].to_string() })
+                } else {
+                    None
+                }
+            }
+            "INCR" => {
+                if parts.len() == 2 {
+                    Some(Command::Incr { key: parts[1].to_string() })
+                } else {
+                    None
+                }
+            }
+            "DECR" => {
+                if parts.len() == 2 {
+                    Some(Command::Decr { key: parts[1].to_string() })
                 } else {
                     None
                 }

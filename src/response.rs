@@ -19,3 +19,9 @@ impl Response {
         }
     }
 }
+
+pub(crate) const UNKNOWN_KEY: &str = "(error) unknown key";
+pub(crate) const OK: &str = "OK";
+pub(crate) const TRUE: &str = "true";
+pub(crate) const FALSE: &str = "true";
+pub(crate) const INCOMPATIBLE_DATA_TYPE: &str = "(error) incompatible data type";

@@ -1,5 +1,5 @@
+use std::env;
 use std::sync::Arc;
-
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::RwLock;
@@ -7,24 +7,39 @@ use tokio::sync::RwLock;
 use command::Command;
 use wal::WAL;
 
-use crate::db::InMemoryDb;
+use crate::db::{InMemoryDb};
+use crate::processor::Processor;
 
 mod command;
 mod wal;
 mod response;
 mod db;
+mod processor;
 
 #[tokio::main]
 async fn main() {
-    let tcp_listener = TcpListener::bind("127.0.0.1:6379").await.unwrap();
+    // Default values
+    let default_port = 6379;
+    let default_wal_file = "wal.log".to_string();
 
-    let wal = Arc::new(RwLock::new(WAL::new("wal.log").unwrap()));
+    // Get environment variables, with fallbacks to default values
+    let port: u16 = env::var("PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(default_port);
+
+    let wal_file = env::var("WAL_FILE").unwrap_or(default_wal_file);
+
+    let address = format!("127.0.0.1:{}", port);
+    let tcp_listener = TcpListener::bind(&address).await.unwrap();
+
+    let wal = Arc::new(RwLock::new(WAL::new(&wal_file).unwrap()));
     let db = Arc::new(RwLock::new(InMemoryDb::new().unwrap()));
 
     {
-        let mut db2 = db.write().await;
+        let mut db = db.write().await;
 
-        match wal.read().await.replay(&mut db2) {
+        match wal.read().await.replay(&mut db) {
             Ok(count) => {
                 println!("restored {} entries from WAL", count)
             }
@@ -44,7 +59,7 @@ async fn main() {
     }
 }
 
-async fn process(mut socket: TcpStream, db: Arc<RwLock<InMemoryDb>>, wal: Arc<RwLock<WAL>>) {
+async fn process(mut socket: TcpStream, db: Arc<RwLock<dyn Processor>>, wal: Arc<RwLock<WAL>>) {
     let mut buf = vec![0; 1024];
 
     loop {
@@ -59,7 +74,6 @@ async fn process(mut socket: TcpStream, db: Arc<RwLock<InMemoryDb>>, wal: Arc<Rw
             }
         };
 
-        // let data = Bytes::copy_from_slice(&buf[..n]);
         let response = match Command::from_slice(&buf[..n]) {
             None => continue,
             Some(cmd) => match cmd {
@@ -68,7 +82,7 @@ async fn process(mut socket: TcpStream, db: Arc<RwLock<InMemoryDb>>, wal: Arc<Rw
                 }
                 Command::Set { ref key, ref value } => {
                     wal.write().await.log(&cmd).unwrap();
-                    db.write().await.insert(key, value)
+                    db.write().await.set(key, value)
                 }
                 Command::Delete { ref key } => {
                     wal.write().await.log(&cmd).unwrap();
@@ -84,6 +98,15 @@ async fn process(mut socket: TcpStream, db: Arc<RwLock<InMemoryDb>>, wal: Arc<Rw
                 }
                 Command::LRange { ref key, start, end } => {
                     db.read().await.lrange(key, start, end)
+                }
+                Command::Exists { ref key } => {
+                    db.read().await.exists(key)
+                }
+                Command::Incr { ref key } => {
+                    db.write().await.incr(key)
+                }
+                Command::Decr { ref key } => {
+                    db.write().await.decr(key)
                 }
             }
         };

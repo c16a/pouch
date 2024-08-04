@@ -5,6 +5,7 @@ use tokio::io;
 
 use crate::command::Command;
 use crate::db::InMemoryDb;
+use crate::processor::Processor;
 
 pub(crate) struct WAL {
     file: File,
@@ -36,7 +37,7 @@ impl WAL {
             let cmd: Command = serde_json::from_str(&line).unwrap();
             match cmd {
                 Command::Set { key, value } => {
-                    db.insert(&key, &value);
+                    db.set(&key, &value);
                 }
                 Command::Delete { key } => {
                     db.remove(&key);
@@ -46,6 +47,12 @@ impl WAL {
                 }
                 Command::RPush { key, value } => {
                     db.rpush(&key, &value);
+                }
+                Command::Incr { key } => {
+                    db.incr(&key);
+                }
+                Command::Decr { key } => {
+                    db.decr(&key);
                 }
                 _ => {} // Ignore other commands during replay
             }

@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::io;
 
 use dashmap::DashMap;
-
+use dashmap::mapref::one::Ref;
 use crate::command::Command;
 use crate::processor::Processor;
 use crate::response::{FALSE, INCOMPATIBLE_DATA_TYPE, OK, Response, TRUE, UNKNOWN_KEY};
@@ -182,21 +182,21 @@ impl InMemoryDb {
     }
 
     fn llen(&self, key: &String) -> Response {
-        match self.data.get(&key.clone()) {
-            Some(db_value) => match db_value.value() {
-                DbValue::List(list) => {
-                    let len = list.len();
-                    Response::SimpleString {
-                        value: len.to_string(),
-                    }
+        if let Some(list_ref) = self.get_list_ref(&key) {
+            if let DbValue::List(list) = list_ref.value() {
+                let len = list.len();
+                Response::SimpleString {
+                    value: len.to_string(),
                 }
-                _ => Response::SimpleString {
+            } else {
+                Response::SimpleString {
                     value: String::from(INCOMPATIBLE_DATA_TYPE),
-                },
-            },
-            None => Response::SimpleString {
+                }
+            }
+        } else {
+            Response::SimpleString {
                 value: String::from(UNKNOWN_KEY),
-            },
+            }
         }
     }
 
@@ -230,36 +230,44 @@ impl InMemoryDb {
     }
 
     fn scard(&self, key: &String) -> Response {
-        match self.data.get(&key.clone()) {
-            Some(db_value) => match db_value.value() {
-                DbValue::Set(set) => {
-                    let len = set.len();
-                    Response::SimpleString {
-                        value: len.to_string(),
-                    }
+        if let Some(set_ref) = self.get_set_ref(&key) {
+            if let DbValue::Set(set) = set_ref.value() {
+                let len = set.len();
+                Response::SimpleString {
+                    value: len.to_string(),
                 }
-                _ => Response::SimpleString {
+            } else {
+                Response::SimpleString {
                     value: String::from(INCOMPATIBLE_DATA_TYPE),
-                },
-            },
-            None => Response::SimpleString {
+                }
+            }
+        } else {
+            Response::SimpleString {
                 value: String::from(UNKNOWN_KEY),
-            },
+            }
         }
     }
 
-    fn get_set(&self, key: &String) -> Option<HashSet<String>> {
+    fn get_value_ref<F>(&self, key: &String, is_variant: F) -> Option<Ref<String, DbValue>>
+    where
+        F: Fn(&DbValue) -> bool,
+    {
         match self.data.get(key) {
-            Some(item) => {
-                match item.value() {
-                    DbValue::Set(set) => {
-                        Some(set.clone())
-                    }
-                    _ => None
-                }
-            }
-            _ => None
+            Some(item) if is_variant(item.value()) => Some(item),
+            _ => None,
         }
+    }
+
+    fn get_set_ref(&self, key: &String) -> Option<Ref<String, DbValue>> {
+        self.get_value_ref(key, |value| matches!(value, DbValue::Set(_)))
+    }
+
+    fn get_list_ref(&self, key: &String) -> Option<Ref<String, DbValue>> {
+        self.get_value_ref(key, |value| matches!(value, DbValue::List(_)))
+    }
+
+    fn get_string_ref(&self, key: &String) -> Option<Ref<String, DbValue>> {
+        self.get_value_ref(key, |value| matches!(value, DbValue::String(_)))
     }
 
     fn sinter(&self, key: &String, others: &Vec<String>) -> Response {
@@ -268,12 +276,14 @@ impl InMemoryDb {
                 DbValue::Set(set) => {
                     let mut intersection = set.clone();
                     for other_key in others {
-                        if let Some(other_set) = self.get_set(other_key) {
-                            // Perform the intersection and collect into a new HashSet
-                            intersection = intersection
-                                .intersection(&other_set)
-                                .cloned()
-                                .collect();
+                        if let Some(other_ref) = self.get_set_ref(other_key) {
+                            if let DbValue::Set(other_set) = other_ref.value() {
+                                // Perform the intersection and collect into a new HashSet
+                                intersection = intersection
+                                    .intersection(&other_set)
+                                    .cloned()
+                                    .collect();
+                            }
                         } else {
                             // If any other set is missing, the intersection is empty
                             intersection.clear();
@@ -503,5 +513,8 @@ mod test {
                 value: String::from(OK)
             }
         );
+
+        let llen_response = db.llen(&key);
+        assert_eq!(llen_response, Response::SimpleString { value: String::from("1") })
     }
 }

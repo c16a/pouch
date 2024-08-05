@@ -97,7 +97,7 @@ impl Command {
             "DEL" => {
                 if parts.len() >= 2 {
                     let mut keys = Vec::new();
-                    parts[2..].iter().for_each(|s| keys.push(s.to_string()));
+                    parts[1..].iter().for_each(|s| keys.push(s.to_string()));
                     Some(Command::Delete {
                         keys,
                     })

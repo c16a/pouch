@@ -1,8 +1,8 @@
-use std::collections::HashSet;
-use dashmap::mapref::one::Ref;
 use crate::processor::db::{DbValue, InMemoryDb};
 use crate::response::Error::{IncompatibleDataType, UnknownKey};
 use crate::response::Response;
+use dashmap::mapref::one::Ref;
+use std::collections::HashSet;
 
 impl InMemoryDb {
     pub(crate) fn sadd(&self, key: &String, values: &Vec<String>) -> Response {
@@ -43,7 +43,6 @@ impl InMemoryDb {
     fn get_set_ref(&self, key: &String) -> Option<Ref<String, DbValue>> {
         self.get_value_ref(key, |value| matches!(value, DbValue::Set(_)))
     }
-
 
     pub(crate) fn sinter(&self, key: &String, others: &Vec<String>) -> Response {
         match self.data.get(&key.clone()) {

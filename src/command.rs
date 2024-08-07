@@ -40,8 +40,16 @@ pub(crate) enum Command {
     Incr {
         key: String,
     },
+    IncrBy {
+        key: String,
+        increment: i64,
+    },
     Decr {
         key: String,
+    },
+    DecrBy {
+        key: String,
+        decrement: i64,
     },
     SAdd {
         key: String,
@@ -98,9 +106,7 @@ impl Command {
                 if parts.len() >= 2 {
                     let mut keys = Vec::new();
                     parts[1..].iter().for_each(|s| keys.push(s.to_string()));
-                    Some(Command::Delete {
-                        keys,
-                    })
+                    Some(Command::Delete { keys })
                 } else {
                     None
                 }
@@ -200,11 +206,37 @@ impl Command {
                     None
                 }
             }
+            "INCRBY" => {
+                if parts.len() == 3 {
+                    match parts[2].parse::<i64>() {
+                        Ok(val) => Some(Command::IncrBy {
+                            key: parts[1].to_string(),
+                            increment: val,
+                        }),
+                        Err(_) => None,
+                    }
+                } else {
+                    None
+                }
+            }
             "DECR" => {
                 if parts.len() == 2 {
                     Some(Command::Decr {
                         key: parts[1].to_string(),
                     })
+                } else {
+                    None
+                }
+            }
+            "DECRBY" => {
+                if parts.len() == 3 {
+                    match parts[2].parse::<i64>() {
+                        Ok(val) => Some(Command::DecrBy {
+                            key: parts[1].to_string(),
+                            decrement: val,
+                        }),
+                        Err(_) => None,
+                    }
                 } else {
                     None
                 }

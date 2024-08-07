@@ -6,12 +6,12 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::RwLock;
 
-use command::Command;
-use wal::WAL;
-use crate::response::Error::UnknownCommand;
-use crate::response::Response;
 use crate::processor::db::InMemoryDb;
 use crate::processor::spec::Processor;
+use crate::response::Error::UnknownCommand;
+use crate::response::Response;
+use command::Command;
+use wal::WAL;
 
 mod command;
 mod processor;

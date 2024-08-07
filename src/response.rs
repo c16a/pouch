@@ -3,7 +3,7 @@ use std::collections::HashSet;
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Response {
     String(String),
-    Integer(i32),
+    Integer(i64),
     List { values: Vec<String> },
     Set { values: HashSet<String> },
     Err(Error),
@@ -22,8 +22,10 @@ impl Error {
         match self {
             Error::UnknownCommand => String::from("unknown command"),
             Error::UnknownKey => String::from("unknown key"),
-            Error::IncompatibleDataType => String::from("WRONGTYPE Operation against a key holding the wrong kind of value"),
-            Error::NotInteger => String::from("value is not an integer or out of range")
+            Error::IncompatibleDataType => {
+                String::from("WRONGTYPE Operation against a key holding the wrong kind of value")
+            }
+            Error::NotInteger => String::from("value is not an integer or out of range"),
         }
     }
 }

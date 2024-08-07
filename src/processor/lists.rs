@@ -1,7 +1,7 @@
-use dashmap::mapref::one::{Ref, RefMut};
 use crate::processor::db::{DbValue, InMemoryDb};
 use crate::response::Error::{IncompatibleDataType, UnknownKey};
 use crate::response::Response;
+use dashmap::mapref::one::{Ref, RefMut};
 
 impl InMemoryDb {
     fn get_list_ref(&self, key: &String) -> Option<Ref<String, DbValue>> {
@@ -17,7 +17,7 @@ impl InMemoryDb {
                     values.into_iter().for_each(|value| {
                         list.insert(0, value.to_string());
                     });
-                    Response::Integer(list.len() as i32)
+                    Response::Integer(list.len() as i64)
                 }
                 _ => Response::Err(IncompatibleDataType),
             },
@@ -27,7 +27,7 @@ impl InMemoryDb {
                     list.insert(0, value.to_string());
                 });
                 self.data.insert(key.to_string(), DbValue::List(list));
-                Response::Integer(values.len() as i32)
+                Response::Integer(values.len() as i64)
             }
         }
     }
@@ -36,17 +36,17 @@ impl InMemoryDb {
         match self.data.get_mut(&key.clone()) {
             Some(mut db_value) => match db_value.value_mut() {
                 DbValue::List(list) => {
-                    values.into_iter().for_each(|value| {
-                        list.push(value.to_string())
-                    });
-                    Response::Integer(list.len() as i32)
+                    values
+                        .into_iter()
+                        .for_each(|value| list.push(value.to_string()));
+                    Response::Integer(list.len() as i64)
                 }
                 _ => Response::Err(IncompatibleDataType),
             },
             None => {
                 let list = values.to_vec();
                 self.data.insert(key.to_string(), DbValue::List(list));
-                Response::Integer(values.len() as i32)
+                Response::Integer(values.len() as i64)
             }
         }
     }
@@ -78,7 +78,12 @@ impl InMemoryDb {
         }
     }
 
-    pub(crate) fn lrange(&self, key: &String, start: Option<usize>, end: Option<usize>) -> Response {
+    pub(crate) fn lrange(
+        &self,
+        key: &String,
+        start: Option<usize>,
+        end: Option<usize>,
+    ) -> Response {
         if let Some(list_ref) = self.get_list_ref(&key) {
             if let DbValue::List(list) = list_ref.value() {
                 let len = list.len();
@@ -106,7 +111,7 @@ impl InMemoryDb {
         if let Some(list_ref) = self.get_list_ref(&key) {
             if let DbValue::List(list) = list_ref.value() {
                 let len = list.len();
-                Response::Integer(len as i32)
+                Response::Integer(len as i64)
             } else {
                 Response::Err(IncompatibleDataType)
             }

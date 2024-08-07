@@ -1,7 +1,7 @@
-use dashmap::mapref::one::Ref;
 use crate::processor::db::{DbValue, InMemoryDb};
 use crate::response::Error::{IncompatibleDataType, NotInteger, UnknownKey};
-use crate::response::{OK, Response};
+use crate::response::{Response, OK};
+use dashmap::mapref::one::Ref;
 
 impl InMemoryDb {
     pub(crate) fn get(&self, key: &String) -> Response {
@@ -24,9 +24,27 @@ impl InMemoryDb {
     pub(crate) fn incr(&self, key: &String) -> Response {
         if let Some(db_value) = self.data.get(key) {
             match db_value.value() {
-                DbValue::String(value) => match value.parse::<i32>() {
+                DbValue::String(value) => match value.parse::<i64>() {
                     Ok(x) => {
                         let y = x + 1;
+                        self.set(key, &y.to_string());
+                        Response::String(y.to_string())
+                    }
+                    Err(_err) => Response::Err(NotInteger),
+                },
+                _ => Response::Err(IncompatibleDataType),
+            }
+        } else {
+            Response::Err(UnknownKey)
+        }
+    }
+
+    pub(crate) fn incr_by(&self, key: &String, increment: &i64) -> Response {
+        if let Some(db_value) = self.data.get(key) {
+            match db_value.value() {
+                DbValue::String(value) => match value.parse::<i64>() {
+                    Ok(x) => {
+                        let y = x + increment;
                         self.set(key, &y.to_string());
                         Response::String(y.to_string())
                     }
@@ -42,9 +60,27 @@ impl InMemoryDb {
     pub(crate) fn decr(&self, key: &String) -> Response {
         if let Some(db_value) = self.data.get(key) {
             match db_value.value() {
-                DbValue::String(value) => match value.parse::<i32>() {
+                DbValue::String(value) => match value.parse::<i64>() {
                     Ok(x) => {
                         let y = x - 1;
+                        self.set(key, &y.to_string());
+                        Response::String(y.to_string())
+                    }
+                    Err(_err) => Response::Err(NotInteger),
+                },
+                _ => Response::Err(IncompatibleDataType),
+            }
+        } else {
+            Response::Err(UnknownKey)
+        }
+    }
+
+    pub(crate) fn decr_by(&self, key: &String, increment: &i64) -> Response {
+        if let Some(db_value) = self.data.get(key) {
+            match db_value.value() {
+                DbValue::String(value) => match value.parse::<i64>() {
+                    Ok(x) => {
+                        let y = x - increment;
                         self.set(key, &y.to_string());
                         Response::String(y.to_string())
                     }

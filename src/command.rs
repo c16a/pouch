@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) enum Command {
@@ -68,6 +69,13 @@ pub(crate) enum Command {
     SDiff {
         key: String,
         others: Vec<String>,
+    },
+    ZAdd {
+        key: String,
+        values: HashMap<String, i64>,
+    },
+    ZCard {
+        key: String
     },
 }
 
@@ -293,6 +301,32 @@ impl Command {
                     Some(Command::SDiff {
                         key: parts[1].to_string(),
                         others: values,
+                    })
+                } else {
+                    None
+                }
+            }
+            "ZADD" => {
+                if parts.len() >= 3 {
+                    let key = parts[1].to_string();
+                    let mut values = HashMap::new();
+                    for chunk in parts[2..].chunks(2) {
+                        let item = chunk[0].to_string();
+                        if let Ok(score) = chunk[1].parse::<i64>() {
+                            values.insert(item, score);
+                        } else {
+                            continue;
+                        }
+                    }
+                    Some(Command::ZAdd { key, values })
+                } else {
+                    None
+                }
+            }
+            "ZCARD" => {
+                if parts.len() == 2 {
+                    Some(Command::ZCard {
+                        key: parts[1].to_string(),
                     })
                 } else {
                     None

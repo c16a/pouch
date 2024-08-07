@@ -16,6 +16,7 @@ use wal::WAL;
 mod command;
 mod processor;
 mod response;
+mod structures;
 mod wal;
 
 #[tokio::main]

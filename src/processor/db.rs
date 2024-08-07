@@ -6,12 +6,14 @@ use std::io;
 use crate::command::Command;
 use crate::processor::spec::Processor;
 use crate::response::Response;
+use crate::structures::sorted_set::SortedSet;
 use crate::wal::WAL;
 
 pub(crate) enum DbValue {
     String(String),
     List(Vec<String>),
     Set(HashSet<String>),
+    SortedSet(SortedSet<String>),
 }
 
 pub(crate) struct InMemoryDb {
@@ -160,6 +162,18 @@ impl Processor for InMemoryDb {
                 ref key,
                 ref others,
             } => self.sdiff(key, others),
+            Command::ZAdd {
+                ref key,
+                ref values,
+            } => {
+                log_if_some!(wal, cmd);
+                self.zadd(&key, values)
+            }
+            Command::ZCard {
+                ref key
+            } => {
+                self.zcard(&key)
+            }
         }
     }
 }

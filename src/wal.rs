@@ -2,8 +2,8 @@ use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, Error, ErrorKind, Result, Write};
 
 use crate::command::Command;
-use crate::db::InMemoryDb;
-use crate::processor::Processor;
+use crate::processor::db::InMemoryDb;
+use crate::processor::spec::Processor;
 
 pub(crate) struct WAL {
     file: File,

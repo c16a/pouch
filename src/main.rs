@@ -8,14 +8,12 @@ use tokio::sync::RwLock;
 
 use command::Command;
 use wal::WAL;
-
-use crate::db::InMemoryDb;
-use crate::processor::Processor;
 use crate::response::Error::UnknownCommand;
 use crate::response::Response;
+use crate::processor::db::InMemoryDb;
+use crate::processor::spec::Processor;
 
 mod command;
-mod db;
 mod processor;
 mod response;
 mod wal;

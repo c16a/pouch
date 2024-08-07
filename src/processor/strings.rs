@@ -7,7 +7,21 @@ impl InMemoryDb {
     pub(crate) fn get(&self, key: &String) -> Response {
         if let Some(db_value) = self.data.get(key) {
             match db_value.value() {
-                crate::processor::db::DbValue::String(value) => Response::String(value.to_string()),
+                DbValue::String(value) => Response::String(value.to_string()),
+                _ => Response::Err(IncompatibleDataType),
+            }
+        } else {
+            Response::Err(UnknownKey)
+        }
+    }
+
+    pub(crate) fn get_del(&self, key: &String) -> Response {
+        if let Some(db_value) = self.data.get(key) {
+            match db_value.value() {
+                DbValue::String(value) => {
+                    self.delete(&vec![key.to_string()]);
+                    Response::String(value.to_string())
+                }
                 _ => Response::Err(IncompatibleDataType),
             }
         } else {

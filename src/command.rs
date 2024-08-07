@@ -5,6 +5,9 @@ pub(crate) enum Command {
     Get {
         key: String,
     },
+    GetDel {
+        key: String,
+    },
     Set {
         key: String,
         value: String,
@@ -86,6 +89,15 @@ impl Command {
             "GET" => {
                 if parts.len() == 2 {
                     Some(Command::Get {
+                        key: parts[1].to_string(),
+                    })
+                } else {
+                    None
+                }
+            }
+            "GETDEL" => {
+                if parts.len() == 2 {
+                    Some(Command::GetDel {
                         key: parts[1].to_string(),
                     })
                 } else {

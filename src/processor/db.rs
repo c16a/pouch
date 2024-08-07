@@ -1,8 +1,7 @@
-use std::collections::HashSet;
-use std::io;
-
 use dashmap::mapref::one::{Ref, RefMut};
 use dashmap::DashMap;
+use std::collections::HashSet;
+use std::io;
 
 use crate::command::Command;
 use crate::processor::spec::Processor;
@@ -31,7 +30,7 @@ impl InMemoryDb {
         Response::Integer(found)
     }
 
-    fn delete(&self, keys: &Vec<String>) -> Response {
+    pub(crate) fn delete(&self, keys: &Vec<String>) -> Response {
         let deleted_rows = keys.into_iter().fold(0, |acc, value| {
             acc + match self.data.remove(&value.to_string()) {
                 Some(_) => 1,
@@ -82,6 +81,10 @@ impl Processor for InMemoryDb {
     fn cmd(&self, cmd: Command, wal: Option<&mut WAL>) -> Response {
         match cmd {
             Command::Get { ref key } => self.get(key),
+            Command::GetDel { ref key } => {
+                log_if_some!(wal, cmd);
+                self.get_del(key)
+            }
             Command::Set { ref key, ref value } => {
                 log_if_some!(wal, cmd);
                 self.set(key, value)

@@ -1,10 +1,10 @@
 [package]
 name = "pouch-cli"
-version = "0.1.0"
-edition = "2021"
-license = "MIT"
-keywords = ["kv", "database"]
-repository = "https://github.com/c16a/pouch"
-homepage = "https://github.com/c16a/pouch"
 description = "A really tiny cli for pouch-server"
-readme = "../README.md"
+version.workspace = true
+edition.workspace = true
+keywords.workspace = true
+repository.workspace = true
+homepage.workspace = true
+license-file.workspace = true
+readme.workspace = true

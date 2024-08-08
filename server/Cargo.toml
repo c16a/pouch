@@ -1,13 +1,13 @@
 [package]
 name = "pouch-server"
-version = "0.1.0"
-edition = "2021"
-license = "MIT"
-keywords = ["kv", "database"]
-repository = "https://github.com/c16a/pouch"
-homepage = "https://github.com/c16a/pouch"
 description = "A really tiny KV store"
-readme = "../README.md"
+version.workspace = true
+edition.workspace = true
+keywords.workspace = true
+repository.workspace = true
+homepage.workspace = true
+license-file.workspace = true
+readme.workspace = true
 
 [dependencies]
 dashmap = { version = "6.0.1" }

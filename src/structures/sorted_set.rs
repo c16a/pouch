@@ -46,9 +46,7 @@ impl<T: Ord + Clone + Eq + std::hash::Hash> SortedSet<T> {
 
             match return_type {
                 SortedSetAddReturnType::Added => {
-                    if !score_changed {
-                        return 0;
-                    }
+                    affected_rows = 0;
                 }
                 SortedSetAddReturnType::Changed => {
                     affected_rows = if score_changed { 1 } else { 0 };
@@ -111,9 +109,16 @@ mod test {
     fn test_sorted_set() {
         let mut sorted_set = SortedSet::new();
 
-        sorted_set.add("apple", 10, None);
-        sorted_set.add("banana", 20, None);
-        sorted_set.add("cherry", 15, None);
-        sorted_set.add("date", 20, None);
+        let mut affected_rows = sorted_set.add("apple", 10, Some(SortedSetAddReturnType::Added));
+        assert_eq!(affected_rows, 1);
+
+        affected_rows = sorted_set.add("banana", 20, Some(SortedSetAddReturnType::Added));
+        assert_eq!(affected_rows, 1);
+
+        affected_rows = sorted_set.add("apple", 15, Some(SortedSetAddReturnType::Added));
+        assert_eq!(affected_rows, 0);
+
+        affected_rows = sorted_set.add("apple", 25, Some(SortedSetAddReturnType::Changed));
+        assert_eq!(affected_rows, 1);
     }
 }

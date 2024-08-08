@@ -8,3 +8,7 @@ repository.workspace = true
 homepage.workspace = true
 license-file.workspace = true
 readme.workspace = true
+
+[dependencies]
+serde = { version = "1.0.204", default-features = false, features = ["derive", "std"] }
+serde_json = { version = "1.0.122", default-features = false, features = ["alloc"] }

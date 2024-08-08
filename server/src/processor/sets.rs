@@ -1,6 +1,6 @@
 use crate::processor::db::{DbValue, InMemoryDb};
-use crate::response::Error::{IncompatibleDataType, UnknownKey};
-use crate::response::Response;
+use pouch_sdk::response::Error::{IncompatibleDataType, UnknownKey};
+use pouch_sdk::response::Response;
 use dashmap::mapref::one::Ref;
 use std::collections::HashSet;
 

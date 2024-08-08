@@ -207,12 +207,17 @@ version = "0.1.1"
 [[package]]
 name = "pouch-sdk"
 version = "0.1.1"
+dependencies = [
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "pouch-server"
 version = "0.1.1"
 dependencies = [
  "dashmap",
+ "pouch-sdk",
  "rand",
  "serde",
  "serde_json",

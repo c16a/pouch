@@ -1,13 +1,12 @@
-use dashmap::mapref::one::{Ref, RefMut};
-use dashmap::DashMap;
-use std::collections::HashSet;
-use std::io;
-
-use crate::command::Command;
 use crate::processor::spec::Processor;
-use crate::response::Response;
+use pouch_sdk::response::Response;
 use crate::structures::sorted_set::SortedSet;
 use crate::wal::WAL;
+use dashmap::mapref::one::{Ref, RefMut};
+use dashmap::DashMap;
+use pouch_sdk::command::Command;
+use std::collections::HashSet;
+use std::io;
 
 pub(crate) enum DbValue {
     String(String),
@@ -169,11 +168,7 @@ impl Processor for InMemoryDb {
                 log_if_some!(wal, cmd);
                 self.zadd(&key, values)
             }
-            Command::ZCard {
-                ref key
-            } => {
-                self.zcard(&key)
-            }
+            Command::ZCard { ref key } => self.zcard(&key),
         }
     }
 }
@@ -181,8 +176,8 @@ impl Processor for InMemoryDb {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::response::Error::UnknownKey;
-    use crate::response::OK;
+    use pouch_sdk::response::Error::UnknownKey;
+    use pouch_sdk::response::OK;
 
     #[test]
     fn test_insert() {

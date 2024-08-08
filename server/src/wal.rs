@@ -1,9 +1,8 @@
-use std::fs::{File, OpenOptions};
-use std::io::{BufRead, BufReader, Error, ErrorKind, Result, Write};
-
-use crate::command::Command;
 use crate::processor::db::InMemoryDb;
 use crate::processor::spec::Processor;
+use pouch_sdk::command::Command;
+use std::fs::{File, OpenOptions};
+use std::io::{BufRead, BufReader, Error, ErrorKind, Result, Write};
 
 pub(crate) struct WAL {
     file: File,

@@ -134,7 +134,10 @@ mod tests {
 
         assert!(filter.contains(&"hello"), "'hello' should be in the filter");
         assert!(filter.contains(&"world"), "'world' should be in the filter");
-        assert!(!filter.contains(&"rust"), "'rust' should not be in the filter");
+        assert!(
+            !filter.contains(&"rust"),
+            "'rust' should not be in the filter"
+        );
     }
 
     #[test]
@@ -142,10 +145,16 @@ mod tests {
         let mut filter = CuckooFilter::new(100, 4, 500);
 
         filter.add(&"example");
-        assert!(filter.contains(&"example"), "'example' should be in the filter");
+        assert!(
+            filter.contains(&"example"),
+            "'example' should be in the filter"
+        );
 
         assert!(filter.remove(&"example"), "Failed to remove 'example'");
-        assert!(!filter.contains(&"example"), "'example' should no longer be in the filter");
+        assert!(
+            !filter.contains(&"example"),
+            "'example' should no longer be in the filter"
+        );
     }
 
     #[test]
@@ -156,6 +165,9 @@ mod tests {
         filter.add(&"two");
 
         // Test for possible collisions
-        assert!(!filter.contains(&"three"), "'three' should not be in the filter");
+        assert!(
+            !filter.contains(&"three"),
+            "'three' should not be in the filter"
+        );
     }
 }

@@ -1,5 +1,5 @@
-use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 pub(crate) struct BloomFilter {
     bit_array: Vec<bool>,
@@ -49,9 +49,18 @@ mod tests {
         bloom_filter.add(&"hello");
         bloom_filter.add(&"world");
 
-        assert!(bloom_filter.contains(&"hello"), "Expected 'hello' to be in the filter");
-        assert!(bloom_filter.contains(&"world"), "Expected 'world' to be in the filter");
-        assert!(!bloom_filter.contains(&"rust"), "Expected 'rust' to not be in the filter");
+        assert!(
+            bloom_filter.contains(&"hello"),
+            "Expected 'hello' to be in the filter"
+        );
+        assert!(
+            bloom_filter.contains(&"world"),
+            "Expected 'world' to be in the filter"
+        );
+        assert!(
+            !bloom_filter.contains(&"rust"),
+            "Expected 'rust' to not be in the filter"
+        );
     }
 
     #[test]
@@ -59,8 +68,14 @@ mod tests {
         let mut bloom_filter = BloomFilter::new(100, 3);
         bloom_filter.add(&"example");
 
-        assert!(bloom_filter.contains(&"example"), "Expected 'example' to be in the filter after addition");
-        assert!(!bloom_filter.contains(&"nonexistent"), "Expected 'nonexistent' to not be in the filter");
+        assert!(
+            bloom_filter.contains(&"example"),
+            "Expected 'example' to be in the filter after addition"
+        );
+        assert!(
+            !bloom_filter.contains(&"nonexistent"),
+            "Expected 'nonexistent' to not be in the filter"
+        );
     }
 
     #[test]
@@ -70,6 +85,9 @@ mod tests {
         bloom_filter.add(&"two");
 
         // Due to small bit array, this might collide and cause a false positive.
-        assert!(bloom_filter.contains(&"three"), "Expected 'three' to not be in the filter, but collisions may cause false positives");
+        assert!(
+            bloom_filter.contains(&"three"),
+            "Expected 'three' to not be in the filter, but collisions may cause false positives"
+        );
     }
 }

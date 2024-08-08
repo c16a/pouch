@@ -1,9 +1,9 @@
 use crate::processor::db::{DbValue, InMemoryDb};
-use crate::response::Error::{IncompatibleDataType, UnknownKey};
-use crate::response::Response;
+use pouch_sdk::response::Error::{IncompatibleDataType, UnknownKey};
+use pouch_sdk::response::Response;
 use crate::structures::sorted_set::{SortedSet, SortedSetAddReturnType};
 use dashmap::mapref::one::{Ref, RefMut};
-use std::collections::{HashMap};
+use std::collections::HashMap;
 
 impl InMemoryDb {
     fn get_sorted_set_ref(&self, key: &String) -> Option<Ref<String, DbValue>> {

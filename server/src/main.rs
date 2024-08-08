@@ -1,21 +1,18 @@
 use std::env;
 use std::ops::DerefMut;
 use std::sync::Arc;
-
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::RwLock;
 
 use crate::processor::db::InMemoryDb;
 use crate::processor::spec::Processor;
-use crate::response::Error::UnknownCommand;
-use crate::response::Response;
-use command::Command;
+use pouch_sdk::command::Command;
+use pouch_sdk::response::Error::UnknownCommand;
+use pouch_sdk::response::Response;
 use wal::WAL;
 
-mod command;
 mod processor;
-mod response;
 mod structures;
 mod wal;
 
@@ -66,7 +63,7 @@ async fn process(mut socket: TcpStream, db: Arc<RwLock<dyn Processor>>, wal: Arc
 
     loop {
         let n = match socket.read(&mut buf).await {
-            Ok(n) if n == 0 => return,
+            Ok(n) if n == 0 => return, // Connection closed
             Ok(n) => n,
             Err(err) => {
                 eprintln!("failed to read from socket; err = {:?}", err);
@@ -74,17 +71,40 @@ async fn process(mut socket: TcpStream, db: Arc<RwLock<dyn Processor>>, wal: Arc
             }
         };
 
-        let response = match Command::from_slice(&buf[..n]) {
-            None => Response::Err(UnknownCommand),
-            Some(cmd) => db
-                .write()
-                .await
-                .cmd(cmd, Some(wal.write().await.deref_mut())),
+        // Slice the buffer to only include the bytes that were read
+        let json_str = match std::str::from_utf8(&buf[..n]) {
+            Ok(json_str) => json_str,
+            Err(err) => {
+                eprintln!("failed to convert buffer to string; err = {:?}", err);
+                continue;
+            }
         };
 
-        socket
-            .write_all(response.to_vec().as_slice())
-            .await
-            .expect("failed to write data to socket");
+        // Parse the JSON command
+        let response = match Command::from_json(json_str) {
+            Err(err) => {
+                eprintln!("error parsing command: {}", err);
+                Response::Err(UnknownCommand)
+            }
+            Ok(cmd) => {
+                // Process the command
+                db.write()
+                    .await
+                    .cmd(cmd, Some(wal.write().await.deref_mut()))
+            }
+        };
+
+        let json_str = response.to_json().unwrap();
+
+        // Write the response to the socket
+        if let Err(err) = socket.write_all(json_str.as_bytes()).await {
+            eprintln!("failed to write data to socket; err = {:?}", err);
+            return;
+        }
+
+        // Clear the buffer for the next read
+        buf.clear();
+        buf.resize(1024, 0); // Reset the buffer size
     }
 }
+

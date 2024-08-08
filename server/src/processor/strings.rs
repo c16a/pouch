@@ -1,7 +1,7 @@
 use crate::processor::db::{DbValue, InMemoryDb};
-use crate::response::Error::{IncompatibleDataType, NotInteger, UnknownKey};
-use crate::response::{Response, OK};
+use pouch_sdk::response::Error::{IncompatibleDataType, NotInteger, UnknownKey};
 use dashmap::mapref::one::Ref;
+use pouch_sdk::response::{Response, OK};
 
 impl InMemoryDb {
     pub(crate) fn get(&self, key: &String) -> Response {

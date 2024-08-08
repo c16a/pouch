@@ -3,7 +3,7 @@ use crate::response::Error::{IncompatibleDataType, UnknownKey};
 use crate::response::Response;
 use crate::structures::sorted_set::{SortedSet, SortedSetAddReturnType};
 use dashmap::mapref::one::{Ref, RefMut};
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 
 impl InMemoryDb {
     fn get_sorted_set_ref(&self, key: &String) -> Option<Ref<String, DbValue>> {

@@ -1,13 +1,6 @@
-[package]
-name = "pouch"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-dashmap = { version = "6.0.1" }
-serde = { version = "1.0.204", default-features = false, features = ["derive", "std"] }
-serde_json = { version = "1.0.122", default-features = false, features = ["alloc"] }
-tokio = { version = "1.39.2", default-features = false, features = ["tokio-macros", "net", "rt-multi-thread", "sync", "macros", "io-util"] }
+[workspace]
+members = ["server", "cli"]
+resolver = "2"
 
 [profile.release]
 lto = true

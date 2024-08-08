@@ -2,3 +2,9 @@
 name = "pouch-cli"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+keywords = ["kv", "database"]
+repository = "https://github.com/c16a/pouch"
+homepage = "https://github.com/c16a/pouch"
+description = "A really tiny cli for pouch-server"
+readme = "../README.md"

@@ -1,7 +1,13 @@
 [package]
-name = "server"
+name = "pouch-server"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+keywords = ["kv", "database"]
+repository = "https://github.com/c16a/pouch"
+homepage = "https://github.com/c16a/pouch"
+description = "A really tiny KV store"
+readme = "../README.md"
 
 [dependencies]
 dashmap = { version = "6.0.1" }

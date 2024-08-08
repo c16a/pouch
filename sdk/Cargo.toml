@@ -1,0 +1,10 @@
+[package]
+name = "pouch-sdk"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+keywords = ["kv", "database"]
+repository = "https://github.com/c16a/pouch"
+homepage = "https://github.com/c16a/pouch"
+description = "The SDK underneath pouch-server"
+readme = "../README.md"

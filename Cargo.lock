@@ -205,6 +205,10 @@ name = "pouch-cli"
 version = "0.1.0"
 
 [[package]]
+name = "pouch-sdk"
+version = "0.1.0"
+
+[[package]]
 name = "pouch-server"
 version = "0.1.0"
 dependencies = [

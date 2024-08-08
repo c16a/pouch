@@ -202,11 +202,11 @@ checksum = "bda66fc9667c18cb2758a2ac84d1167245054bcf85d5d1aaa6923f45801bdd02"
 
 [[package]]
 name = "pouch-cli"
-version = "0.1.1"
+version = "0.2.0"
 
 [[package]]
 name = "pouch-sdk"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -214,7 +214,7 @@ dependencies = [
 
 [[package]]
 name = "pouch-server"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "dashmap",
  "pouch-sdk",

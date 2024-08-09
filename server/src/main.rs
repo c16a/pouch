@@ -1,7 +1,6 @@
 use std::env;
 use std::ops::DerefMut;
 use std::sync::Arc;
-use serde_json::json;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::RwLock;
@@ -85,7 +84,7 @@ async fn process(mut socket: TcpStream, db: Arc<RwLock<dyn Processor>>, wal: Arc
         let response = match Command::from_json(json_str) {
             Err(err) => {
                 eprintln!("error parsing command: {}", err);
-                Response::Err(UnknownCommand)
+                Response::Err { error: UnknownCommand }
             }
             Ok(cmd) => {
                 // Process the command

@@ -12,9 +12,9 @@ impl InMemoryDb {
                     let inserted_rows = values.into_iter().fold(0, |acc, value| {
                         acc + if set.insert(value.to_string()) { 1 } else { 0 }
                     });
-                    Response::String(inserted_rows.to_string())
+                    Response::AffectedKeys { affected_keys: inserted_rows }
                 }
-                _ => Response::Err(IncompatibleDataType),
+                _ => Response::Err{error: IncompatibleDataType},
             },
             None => {
                 let mut set = HashSet::new();
@@ -22,7 +22,7 @@ impl InMemoryDb {
                     acc + if set.insert(value.to_string()) { 1 } else { 0 }
                 });
                 self.data.insert(key.to_string(), DbValue::Set(set));
-                Response::String(inserted_rows.to_string())
+                Response::AffectedKeys { affected_keys: inserted_rows }
             }
         }
     }
@@ -31,12 +31,12 @@ impl InMemoryDb {
         if let Some(set_ref) = self.get_set_ref(&key) {
             if let DbValue::Set(set) = set_ref.value() {
                 let len = set.len();
-                Response::String(len.to_string())
+                Response::Count { count: len as u64 }
             } else {
-                Response::Err(IncompatibleDataType)
+                Response::Err{error: IncompatibleDataType}
             }
         } else {
-            Response::Err(UnknownKey)
+            Response::Err{error: UnknownKey}
         }
     }
 
@@ -66,9 +66,9 @@ impl InMemoryDb {
                         values: intersection.into_iter().collect(),
                     }
                 }
-                _ => Response::Err(IncompatibleDataType),
+                _ => Response::Err{error: IncompatibleDataType},
             },
-            None => Response::Err(UnknownKey),
+            None => Response::Err{error: UnknownKey},
         }
     }
 
@@ -88,9 +88,9 @@ impl InMemoryDb {
                         values: difference.into_iter().collect(),
                     }
                 }
-                _ => Response::Err(IncompatibleDataType),
+                _ => Response::Err{error: IncompatibleDataType},
             },
-            None => Response::Err(UnknownKey),
+            None => Response::Err{error: UnknownKey},
         }
     }
 }

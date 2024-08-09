@@ -7,11 +7,11 @@ impl InMemoryDb {
     pub(crate) fn get(&self, key: &String) -> Response {
         if let Some(db_value) = self.data.get(key) {
             match db_value.value() {
-                DbValue::String(value) => Response::String(value.to_string()),
-                _ => Response::Err(IncompatibleDataType),
+                DbValue::String(value) => Response::StringValue { value: value.to_string() },
+                _ => Response::Err { error: IncompatibleDataType },
             }
         } else {
-            Response::Err(UnknownKey)
+            Response::Err { error: UnknownKey }
         }
     }
 
@@ -20,19 +20,19 @@ impl InMemoryDb {
             match db_value.value() {
                 DbValue::String(value) => {
                     self.delete(&vec![key.to_string()]);
-                    Response::String(value.to_string())
+                    Response::StringValue { value: value.to_string() }
                 }
-                _ => Response::Err(IncompatibleDataType),
+                _ => Response::Err { error: IncompatibleDataType },
             }
         } else {
-            Response::Err(UnknownKey)
+            Response::Err { error: UnknownKey }
         }
     }
 
     pub(crate) fn set(&self, key: &String, value: &String) -> Response {
         self.data
             .insert(key.to_string(), DbValue::String(value.to_string()));
-        Response::String(String::from(OK))
+        Response::AffectedKeys { affected_keys: 1 }
     }
 
     pub(crate) fn incr(&self, key: &String) -> Response {
@@ -42,14 +42,14 @@ impl InMemoryDb {
                     Ok(x) => {
                         let y = x + 1;
                         self.set(key, &y.to_string());
-                        Response::String(y.to_string())
+                        Response::IntValue { value: y }
                     }
-                    Err(_err) => Response::Err(NotInteger),
+                    Err(_err) => Response::Err { error: NotInteger },
                 },
-                _ => Response::Err(IncompatibleDataType),
+                _ => Response::Err { error: IncompatibleDataType },
             }
         } else {
-            Response::Err(UnknownKey)
+            Response::Err { error: UnknownKey }
         }
     }
 
@@ -60,14 +60,14 @@ impl InMemoryDb {
                     Ok(x) => {
                         let y = x + increment;
                         self.set(key, &y.to_string());
-                        Response::String(y.to_string())
+                        Response::IntValue { value: y }
                     }
-                    Err(_err) => Response::Err(NotInteger),
+                    Err(_err) => Response::Err { error: NotInteger },
                 },
-                _ => Response::Err(IncompatibleDataType),
+                _ => Response::Err { error: IncompatibleDataType },
             }
         } else {
-            Response::Err(UnknownKey)
+            Response::Err { error: UnknownKey }
         }
     }
 
@@ -78,14 +78,14 @@ impl InMemoryDb {
                     Ok(x) => {
                         let y = x - 1;
                         self.set(key, &y.to_string());
-                        Response::String(y.to_string())
+                        Response::IntValue { value: y }
                     }
-                    Err(_err) => Response::Err(NotInteger),
+                    Err(_err) => Response::Err { error: NotInteger },
                 },
-                _ => Response::Err(IncompatibleDataType),
+                _ => Response::Err { error: IncompatibleDataType },
             }
         } else {
-            Response::Err(UnknownKey)
+            Response::Err { error: UnknownKey }
         }
     }
 
@@ -96,14 +96,14 @@ impl InMemoryDb {
                     Ok(x) => {
                         let y = x - increment;
                         self.set(key, &y.to_string());
-                        Response::String(y.to_string())
+                        Response::IntValue { value: y }
                     }
-                    Err(_err) => Response::Err(NotInteger),
+                    Err(_err) => Response::Err { error: NotInteger },
                 },
-                _ => Response::Err(IncompatibleDataType),
+                _ => Response::Err { error: IncompatibleDataType },
             }
         } else {
-            Response::Err(UnknownKey)
+            Response::Err { error: UnknownKey }
         }
     }
 

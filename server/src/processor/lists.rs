@@ -17,9 +17,9 @@ impl InMemoryDb {
                     values.into_iter().for_each(|value| {
                         list.insert(0, value.to_string());
                     });
-                    Response::Integer(list.len() as i64)
+                    Response::AffectedKeys { affected_keys: list.len() as u64 }
                 }
-                _ => Response::Err(IncompatibleDataType),
+                _ => Response::Err{error: IncompatibleDataType},
             },
             None => {
                 let mut list = Vec::new();
@@ -27,7 +27,7 @@ impl InMemoryDb {
                     list.insert(0, value.to_string());
                 });
                 self.data.insert(key.to_string(), DbValue::List(list));
-                Response::Integer(values.len() as i64)
+                Response::AffectedKeys { affected_keys: values.len() as u64 }
             }
         }
     }
@@ -39,14 +39,14 @@ impl InMemoryDb {
                     values
                         .into_iter()
                         .for_each(|value| list.push(value.to_string()));
-                    Response::Integer(list.len() as i64)
+                    Response::AffectedKeys { affected_keys: list.len() as u64 }
                 }
-                _ => Response::Err(IncompatibleDataType),
+                _ => Response::Err{error: IncompatibleDataType},
             },
             None => {
                 let list = values.to_vec();
                 self.data.insert(key.to_string(), DbValue::List(list));
-                Response::Integer(values.len() as i64)
+                Response::AffectedKeys { affected_keys: values.len() as u64 }
             }
         }
     }
@@ -55,12 +55,12 @@ impl InMemoryDb {
         if let Some(mut list_ref) = self.get_list_ref_mut(&key) {
             if let DbValue::List(list) = list_ref.value_mut() {
                 let el = list.remove(0);
-                Response::String(el)
+                Response::StringValue { value: el }
             } else {
-                Response::Err(IncompatibleDataType)
+                Response::Err{error: IncompatibleDataType}
             }
         } else {
-            Response::Err(UnknownKey)
+            Response::Err{error: UnknownKey}
         }
     }
 
@@ -69,12 +69,12 @@ impl InMemoryDb {
             if let DbValue::List(list) = list_ref.value_mut() {
                 let len = list.len();
                 let el = list.remove(len - 1);
-                Response::String(el)
+                Response::StringValue { value: el }
             } else {
-                Response::Err(IncompatibleDataType)
+                Response::Err{error: IncompatibleDataType}
             }
         } else {
-            Response::Err(UnknownKey)
+            Response::Err{error: UnknownKey}
         }
     }
 
@@ -96,14 +96,12 @@ impl InMemoryDb {
                     None => len,
                 };
                 let range = &list[start..end];
-                Response::List {
-                    values: range.to_vec(),
-                }
+                Response::List { values: range.to_vec() }
             } else {
-                Response::Err(IncompatibleDataType)
+                Response::Err{error: IncompatibleDataType}
             }
         } else {
-            Response::Err(UnknownKey)
+            Response::Err{error: UnknownKey}
         }
     }
 
@@ -111,12 +109,12 @@ impl InMemoryDb {
         if let Some(list_ref) = self.get_list_ref(&key) {
             if let DbValue::List(list) = list_ref.value() {
                 let len = list.len();
-                Response::Integer(len as i64)
+                Response::Count { count: len as u64 }
             } else {
-                Response::Err(IncompatibleDataType)
+                Response::Err{error: IncompatibleDataType}
             }
         } else {
-            Response::Err(UnknownKey)
+            Response::Err{error: UnknownKey}
         }
     }
 }

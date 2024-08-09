@@ -27,8 +27,7 @@ impl InMemoryDb {
     }
 
     fn exists(&self, key: &String) -> Response {
-        let found = if self.data.contains_key(key) { 1 } else { 0 };
-        Response::Integer(found)
+        Response::BooleanValue { value: self.data.contains_key(key) }
     }
 
     pub(crate) fn delete(&self, keys: &Vec<String>) -> Response {
@@ -38,7 +37,7 @@ impl InMemoryDb {
                 None => 0,
             }
         });
-        Response::Integer(deleted_rows)
+        Response::AffectedKeys { affected_keys: deleted_rows }
     }
 
     pub(crate) fn get_value_ref<F>(
@@ -187,7 +186,7 @@ mod test {
         let value = String::from("c16a");
         let response = db.set(&key, &value);
 
-        assert_eq!(response, Response::String(String::from(OK)));
+        assert_eq!(response, Response::AffectedKeys { affected_keys: 1 });
     }
 
     #[test]
@@ -198,10 +197,10 @@ mod test {
         let value = String::from("c16a");
 
         let set_response = db.set(&key, &value);
-        assert_eq!(set_response, Response::String(String::from(OK)));
+        assert_eq!(set_response, Response::AffectedKeys { affected_keys: 1 });
 
         let get_response = db.get(&key);
-        assert_eq!(get_response, Response::String(value));
+        assert_eq!(get_response, Response::StringValue { value });
     }
 
     #[test]
@@ -212,16 +211,16 @@ mod test {
         let value = String::from("c16a");
 
         let set_response = db.set(&key, &value);
-        assert_eq!(set_response, Response::String(String::from(OK)));
+        assert_eq!(set_response, Response::AffectedKeys { affected_keys: 1 });
 
         let get_response = db.get(&key);
-        assert_eq!(get_response, Response::String(value));
+        assert_eq!(get_response, Response::StringValue { value });
 
         let delete_response = db.delete(&[String::from("name")].to_vec());
-        assert_eq!(delete_response, Response::Integer(1));
+        assert_eq!(delete_response, Response::AffectedKeys { affected_keys: 1 });
 
         let get_response = db.get(&String::from("name"));
-        assert_eq!(get_response, Response::Err(UnknownKey));
+        assert_eq!(get_response, Response::Err{error: UnknownKey});
     }
 
     #[test]
@@ -235,9 +234,9 @@ mod test {
         let orange = String::from("orange");
 
         let apple_lpush_response = db.lpush(&key, &[apple].to_owned().to_vec());
-        assert_eq!(apple_lpush_response, Response::Integer(1));
+        assert_eq!(apple_lpush_response, Response::AffectedKeys { affected_keys: 1 });
 
         let llen_response = db.llen(&key);
-        assert_eq!(llen_response, Response::Integer(1))
+        assert_eq!(llen_response, Response::Count { count: 1 });
     }
 }

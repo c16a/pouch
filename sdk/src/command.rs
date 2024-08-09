@@ -3,79 +3,133 @@ use serde_json::Result;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "action")]
 pub enum Command {
+    #[serde(rename = "GET")]
     Get {
+        #[serde(rename = "key")]
         key: String,
     },
+    #[serde(rename = "GETDEL")]
     GetDel {
+        #[serde(rename = "key")]
         key: String,
     },
+    #[serde(rename = "SET")]
     Set {
+        #[serde(rename = "key")]
         key: String,
+        #[serde(rename = "value")]
         value: String,
     },
+    #[serde(rename = "DELETE")]
     Delete {
+        #[serde(rename = "keys")]
         keys: Vec<String>,
     },
+    #[serde(rename = "LPUSH")]
     LPush {
+        #[serde(rename = "key")]
         key: String,
+        #[serde(rename = "values")]
         values: Vec<String>,
     },
+    #[serde(rename = "RPUSH")]
     RPush {
+        #[serde(rename = "key")]
         key: String,
+        #[serde(rename = "values")]
         values: Vec<String>,
     },
+    #[serde(rename = "LRANGE")]
     LRange {
+        #[serde(rename = "key")]
         key: String,
+        #[serde(rename = "start")]
         start: Option<usize>,
+        #[serde(rename = "end")]
         end: Option<usize>,
     },
+    #[serde(rename = "LLEN")]
     LLen {
+        #[serde(rename = "key")]
         key: String,
     },
+    #[serde(rename = "LPOP")]
     LPop {
+        #[serde(rename = "key")]
         key: String,
     },
+    #[serde(rename = "RPOP")]
     RPop {
+        #[serde(rename = "key")]
         key: String,
     },
+    #[serde(rename = "EXISTS")]
     Exists {
+        #[serde(rename = "key")]
         key: String,
     },
+    #[serde(rename = "INCR")]
     Incr {
+        #[serde(rename = "key")]
         key: String,
     },
+    #[serde(rename = "INCRBY")]
     IncrBy {
+        #[serde(rename = "key")]
         key: String,
+        #[serde(rename = "increment")]
         increment: i64,
     },
+    #[serde(rename = "DECR")]
     Decr {
+        #[serde(rename = "key")]
         key: String,
     },
+    #[serde(rename = "DECRBY")]
     DecrBy {
+        #[serde(rename = "key")]
         key: String,
+        #[serde(rename = "decrement")]
         decrement: i64,
     },
+    #[serde(rename = "SADD")]
     SAdd {
+        #[serde(rename = "key")]
         key: String,
+        #[serde(rename = "values")]
         values: Vec<String>,
     },
+    #[serde(rename = "SCARD")]
     SCard {
+        #[serde(rename = "key")]
         key: String,
     },
+    #[serde(rename = "SINTER")]
     SInter {
+        #[serde(rename = "key")]
         key: String,
+        #[serde(rename = "others")]
         others: Vec<String>,
     },
+    #[serde(rename = "SDIFF")]
     SDiff {
+        #[serde(rename = "key")]
         key: String,
+        #[serde(rename = "others")]
         others: Vec<String>,
     },
+    #[serde(rename = "ZADD")]
     ZAdd {
+        #[serde(rename = "key")]
         key: String,
+        #[serde(rename = "values")]
         values: HashMap<String, i64>,
     },
+    #[serde(rename = "ZCARD")]
     ZCard {
+        #[serde(rename = "key")]
         key: String,
     },
 }
@@ -90,13 +144,14 @@ impl Command {
     }
 }
 
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_get_command_from_json() {
-        let json_str = r#"{"Get":{"key":"mykey"}}"#;
+        let json_str = r#"{"action":"GET","key":"mykey"}"#;
         let cmd = Command::from_json(json_str).unwrap();
         match cmd {
             Command::Get { key } => assert_eq!(key, "mykey"),
@@ -111,12 +166,12 @@ mod tests {
             value: "myvalue".to_string(),
         };
         let json_str = cmd.to_json().unwrap();
-        assert_eq!(json_str, r#"{"Set":{"key":"mykey","value":"myvalue"}}"#);
+        assert_eq!(json_str, r#"{"action":"SET","key":"mykey","value":"myvalue"}"#);
     }
 
     #[test]
     fn test_zadd_command_from_json() {
-        let json_str = r#"{"ZAdd":{"key":"myset","values":{"key_1":1,"key_2":2}}}"#;
+        let json_str = r#"{"action":"ZADD","key":"myset","values":{"key_1":1,"key_2":2}}"#;
         let cmd = Command::from_json(json_str).unwrap();
         match cmd {
             Command::ZAdd { key, values } => {
@@ -138,7 +193,7 @@ mod tests {
         let json_str = cmd.to_json().unwrap();
         assert_eq!(
             json_str,
-            r#"{"LRange":{"key":"mylist","start":0,"end":10}}"#
+            r#"{"action":"LRANGE","key":"mylist","start":0,"end":10}"#
         );
     }
 }

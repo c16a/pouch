@@ -1,8 +1,8 @@
 use crate::processor::db::{DbValue, InMemoryDb};
-use pouch_sdk::response::Error::{IncompatibleDataType, UnknownKey};
-use pouch_sdk::response::Response;
 use crate::structures::sorted_set::{SortedSet, SortedSetAddReturnType};
 use dashmap::mapref::one::{Ref, RefMut};
+use pouch_sdk::response::Error::{IncompatibleDataType, UnknownKey};
+use pouch_sdk::response::Response;
 use std::collections::HashMap;
 
 impl InMemoryDb {

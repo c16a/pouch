@@ -1,10 +1,10 @@
 use crate::processor::spec::Processor;
-use pouch_sdk::response::Response;
 use crate::structures::sorted_set::SortedSet;
 use crate::wal::WAL;
 use dashmap::mapref::one::{Ref, RefMut};
 use dashmap::DashMap;
 use pouch_sdk::command::Command;
+use pouch_sdk::response::Response;
 use std::collections::HashSet;
 use std::io;
 

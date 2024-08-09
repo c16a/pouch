@@ -1,7 +1,7 @@
 use crate::processor::db::{DbValue, InMemoryDb};
+use dashmap::mapref::one::{Ref, RefMut};
 use pouch_sdk::response::Error::{IncompatibleDataType, UnknownKey};
 use pouch_sdk::response::Response;
-use dashmap::mapref::one::{Ref, RefMut};
 
 impl InMemoryDb {
     fn get_list_ref(&self, key: &String) -> Option<Ref<String, DbValue>> {

@@ -1,6 +1,7 @@
 use std::env;
 use std::ops::DerefMut;
 use std::sync::Arc;
+use serde_json::json;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::RwLock;
@@ -97,7 +98,7 @@ async fn process(mut socket: TcpStream, db: Arc<RwLock<dyn Processor>>, wal: Arc
         let json_str = response.to_json().unwrap();
 
         // Write the response to the socket
-        if let Err(err) = socket.write_all(json_str.as_bytes()).await {
+        if let Err(err) = socket.write_all(format!("{}\n", json_str).as_bytes()).await {
             eprintln!("failed to write data to socket; err = {:?}", err);
             return;
         }
@@ -107,4 +108,3 @@ async fn process(mut socket: TcpStream, db: Arc<RwLock<dyn Processor>>, wal: Arc
         buf.resize(1024, 0); // Reset the buffer size
     }
 }
-

@@ -1,6 +1,6 @@
 use crate::processor::db::{DbValue, InMemoryDb};
-use pouch_sdk::response::Error::{IncompatibleDataType, NotInteger, UnknownKey};
 use dashmap::mapref::one::Ref;
+use pouch_sdk::response::Error::{IncompatibleDataType, NotInteger, UnknownKey};
 use pouch_sdk::response::{Response, OK};
 
 impl InMemoryDb {

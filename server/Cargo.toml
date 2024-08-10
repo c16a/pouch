@@ -18,4 +18,4 @@ tokio = { version = "1.39.2", default-features = false, features = ["tokio-macro
 pouch-sdk = { path = "../sdk", version = "0.3.0" }
 tokio-tungstenite = "0.23.1"
 futures-util = "0.3.30"
-
+openraft = { version = "0.9.13", features = ["storage-v2"] }

@@ -1,13 +1,12 @@
+use futures_util::{SinkExt, StreamExt};
 use std::env;
-use std::fmt::format;
 use std::ops::DerefMut;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::RwLock;
-use tokio_tungstenite::tungstenite::protocol::Message;
 use tokio_tungstenite::accept_async;
-use futures_util::{StreamExt, SinkExt};
+use tokio_tungstenite::tungstenite::protocol::Message;
 
 use crate::processor::db::InMemoryDb;
 use crate::processor::spec::Processor;

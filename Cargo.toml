@@ -3,7 +3,7 @@ members = ["server", "cli", "sdk"]
 resolver = "2"
 
 [workspace.package]
-version = "0.2.4"
+version = "0.3.0"
 license-file = "LICENSE.md"
 repository = "https://github.com/c16a/pouch"
 homepage = "https://github.com/c16a/pouch"

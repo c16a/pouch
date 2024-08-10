@@ -9,7 +9,7 @@ env:
 
 jobs:
   lint:
-    name: DevSkim
+    name: Code Scan
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -57,6 +57,23 @@ jobs:
           - x86_64-apple-darwin
     name: Build ${{ matrix.target }} debug binary
     runs-on: macos-latest
+    needs:
+      - test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust target
+        run: |
+          rustup target add ${{ matrix.target }}
+      - name: Build
+        run: cargo build --target=${{ matrix.target }}
+  debug-windows:
+    strategy:
+      matrix:
+        target:
+          - aarch64-pc-windows-msvc
+          - x86_64-pc-windows-msvc
+    name: Build ${{ matrix.target }} debug binary
+    runs-on: windows-latest
     needs:
       - test
     steps:

@@ -34,3 +34,20 @@ jobs:
           rustup target add ${{ matrix.target }}
       - name: Build
         run: cargo build --target=${{ matrix.target }}
+  debug-macos:
+    strategy:
+      matrix:
+        target:
+          - aarch64-apple-darwin
+          - x86_64-apple-darwin
+    name: Build ${{ matrix.target }} debug binary
+    runs-on: macos-latest
+    needs:
+      - test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust target
+        run: |
+          rustup target add ${{ matrix.target }}
+      - name: Build
+        run: cargo build --target=${{ matrix.target }}

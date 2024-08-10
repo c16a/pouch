@@ -25,6 +25,10 @@ pub enum Command {
 
         #[serde(rename = "expiry_seconds")]
         expiry_seconds: u64,
+
+        #[serde(rename = "expiry_ts")]
+        #[serde(default)]
+        expiry_ts: u64,
     },
     #[serde(rename = "DELETE")]
     Delete {
@@ -168,11 +172,12 @@ mod tests {
             key: "mykey".to_string(),
             value: "myvalue".to_string(),
             expiry_seconds: 3600,
+            expiry_ts: 0,
         };
         let json_str = cmd.to_json().unwrap();
         assert_eq!(
             json_str,
-            r#"{"action":"SET","key":"mykey","value":"myvalue","expiry_seconds":3600}"#
+            r#"{"action":"SET","key":"mykey","value":"myvalue","expiry_seconds":3600,"expiry_ts":0}"#
         );
     }
 

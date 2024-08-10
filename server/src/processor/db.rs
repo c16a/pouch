@@ -7,6 +7,8 @@ use pouch_sdk::command::Command;
 use pouch_sdk::response::Response;
 use std::collections::HashSet;
 use std::io;
+use std::time::{SystemTime, UNIX_EPOCH};
+use pouch_sdk::response::Error::TimeWentBackwards;
 
 pub(crate) enum DbValue {
     String {
@@ -92,7 +94,19 @@ impl Processor for InMemoryDb {
                 log_if_some!(wal, cmd);
                 self.get_del(key)
             }
-            Command::Set { ref key, ref value, ref expiry_seconds } => {
+            Command::Set { ref key, ref value, ref expiry_seconds, ref expiry_ts } => {
+                let mut cmd= cmd.clone();
+                if *expiry_ts == 0 {
+                    match SystemTime::now().duration_since(UNIX_EPOCH) {
+                        Ok(now) => {
+                            let expiry_ts = now.as_secs() + expiry_seconds;
+                            cmd = Command::Set { key: key.to_string(), value: value.to_string(), expiry_seconds: *expiry_seconds, expiry_ts };
+                        }
+                        Err(_err) => {
+                            return Response::Err { error: TimeWentBackwards }
+                        }
+                    }
+                }
                 log_if_some!(wal, cmd);
                 self.set(key, value, expiry_seconds)
             }

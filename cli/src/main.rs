@@ -34,7 +34,10 @@ async fn handle_interactive_loop(mut stream: TcpStream) {
     let mut stdout = io::stdout();
 
     loop {
-        stdout.write_all("pouch-cli> ".to_string().as_bytes()).await.unwrap();
+        stdout
+            .write_all("pouch-cli> ".to_string().as_bytes())
+            .await
+            .unwrap();
         stdout.flush().await.unwrap();
 
         tokio::select! {

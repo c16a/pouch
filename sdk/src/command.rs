@@ -19,8 +19,12 @@ pub enum Command {
     Set {
         #[serde(rename = "key")]
         key: String,
+
         #[serde(rename = "value")]
         value: String,
+
+        #[serde(rename = "expiry_seconds")]
+        expiry_seconds: u64,
     },
     #[serde(rename = "DELETE")]
     Delete {
@@ -144,7 +148,6 @@ impl Command {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -164,9 +167,13 @@ mod tests {
         let cmd = Command::Set {
             key: "mykey".to_string(),
             value: "myvalue".to_string(),
+            expiry_seconds: 3600,
         };
         let json_str = cmd.to_json().unwrap();
-        assert_eq!(json_str, r#"{"action":"SET","key":"mykey","value":"myvalue"}"#);
+        assert_eq!(
+            json_str,
+            r#"{"action":"SET","key":"mykey","value":"myvalue","expiry_seconds":3600}"#
+        );
     }
 
     #[test]

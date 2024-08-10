@@ -84,7 +84,9 @@ async fn process(mut socket: TcpStream, db: Arc<RwLock<dyn Processor>>, wal: Arc
         let response = match Command::from_json(json_str) {
             Err(err) => {
                 eprintln!("error parsing command: {}", err);
-                Response::Err { error: UnknownCommand }
+                Response::Err {
+                    error: UnknownCommand,
+                }
             }
             Ok(cmd) => {
                 // Process the command

@@ -12,9 +12,13 @@ impl InMemoryDb {
                     let inserted_rows = values.into_iter().fold(0, |acc, value| {
                         acc + if set.insert(value.to_string()) { 1 } else { 0 }
                     });
-                    Response::AffectedKeys { affected_keys: inserted_rows }
+                    Response::AffectedKeys {
+                        affected_keys: inserted_rows,
+                    }
                 }
-                _ => Response::Err{error: IncompatibleDataType},
+                _ => Response::Err {
+                    error: IncompatibleDataType,
+                },
             },
             None => {
                 let mut set = HashSet::new();
@@ -22,7 +26,9 @@ impl InMemoryDb {
                     acc + if set.insert(value.to_string()) { 1 } else { 0 }
                 });
                 self.data.insert(key.to_string(), DbValue::Set(set));
-                Response::AffectedKeys { affected_keys: inserted_rows }
+                Response::AffectedKeys {
+                    affected_keys: inserted_rows,
+                }
             }
         }
     }
@@ -33,10 +39,12 @@ impl InMemoryDb {
                 let len = set.len();
                 Response::Count { count: len as u64 }
             } else {
-                Response::Err{error: IncompatibleDataType}
+                Response::Err {
+                    error: IncompatibleDataType,
+                }
             }
         } else {
-            Response::Err{error: UnknownKey}
+            Response::Err { error: UnknownKey }
         }
     }
 
@@ -66,9 +74,11 @@ impl InMemoryDb {
                         values: intersection.into_iter().collect(),
                     }
                 }
-                _ => Response::Err{error: IncompatibleDataType},
+                _ => Response::Err {
+                    error: IncompatibleDataType,
+                },
             },
-            None => Response::Err{error: UnknownKey},
+            None => Response::Err { error: UnknownKey },
         }
     }
 
@@ -88,9 +98,11 @@ impl InMemoryDb {
                         values: difference.into_iter().collect(),
                     }
                 }
-                _ => Response::Err{error: IncompatibleDataType},
+                _ => Response::Err {
+                    error: IncompatibleDataType,
+                },
             },
-            None => Response::Err{error: UnknownKey},
+            None => Response::Err { error: UnknownKey },
         }
     }
 }

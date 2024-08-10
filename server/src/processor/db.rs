@@ -9,7 +9,10 @@ use std::collections::HashSet;
 use std::io;
 
 pub(crate) enum DbValue {
-    String(String),
+    String {
+        value: String,
+        expiry_ts: u64,
+    },
     List(Vec<String>),
     Set(HashSet<String>),
     SortedSet(SortedSet<String>),
@@ -27,7 +30,9 @@ impl InMemoryDb {
     }
 
     fn exists(&self, key: &String) -> Response {
-        Response::BooleanValue { value: self.data.contains_key(key) }
+        Response::BooleanValue {
+            value: self.data.contains_key(key),
+        }
     }
 
     pub(crate) fn delete(&self, keys: &Vec<String>) -> Response {
@@ -37,7 +42,9 @@ impl InMemoryDb {
                 None => 0,
             }
         });
-        Response::AffectedKeys { affected_keys: deleted_rows }
+        Response::AffectedKeys {
+            affected_keys: deleted_rows,
+        }
     }
 
     pub(crate) fn get_value_ref<F>(
@@ -85,9 +92,9 @@ impl Processor for InMemoryDb {
                 log_if_some!(wal, cmd);
                 self.get_del(key)
             }
-            Command::Set { ref key, ref value } => {
+            Command::Set { ref key, ref value, ref expiry_seconds } => {
                 log_if_some!(wal, cmd);
-                self.set(key, value)
+                self.set(key, value, expiry_seconds)
             }
             Command::Delete { ref keys } => {
                 log_if_some!(wal, cmd);
@@ -176,7 +183,7 @@ impl Processor for InMemoryDb {
 mod test {
     use super::*;
     use pouch_sdk::response::Error::UnknownKey;
-    use pouch_sdk::response::OK;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn test_insert() {
@@ -184,7 +191,8 @@ mod test {
 
         let key = String::from("name");
         let value = String::from("c16a");
-        let response = db.set(&key, &value);
+        let expiry_seconds = SystemTime::now().duration_since(UNIX_EPOCH).expect("").as_secs() + 100;
+        let response = db.set(&key, &value, &expiry_seconds);
 
         assert_eq!(response, Response::AffectedKeys { affected_keys: 1 });
     }
@@ -196,7 +204,8 @@ mod test {
         let key = String::from("name");
         let value = String::from("c16a");
 
-        let set_response = db.set(&key, &value);
+        let expiry_seconds = SystemTime::now().duration_since(UNIX_EPOCH).expect("").as_secs() + 100;
+        let set_response = db.set(&key, &value, &expiry_seconds);
         assert_eq!(set_response, Response::AffectedKeys { affected_keys: 1 });
 
         let get_response = db.get(&key);
@@ -210,7 +219,8 @@ mod test {
         let key = String::from("name");
         let value = String::from("c16a");
 
-        let set_response = db.set(&key, &value);
+        let expiry_seconds = SystemTime::now().duration_since(UNIX_EPOCH).expect("").as_secs() + 100;
+        let set_response = db.set(&key, &value, &expiry_seconds);
         assert_eq!(set_response, Response::AffectedKeys { affected_keys: 1 });
 
         let get_response = db.get(&key);
@@ -220,7 +230,7 @@ mod test {
         assert_eq!(delete_response, Response::AffectedKeys { affected_keys: 1 });
 
         let get_response = db.get(&String::from("name"));
-        assert_eq!(get_response, Response::Err{error: UnknownKey});
+        assert_eq!(get_response, Response::Err { error: UnknownKey });
     }
 
     #[test]
@@ -234,7 +244,10 @@ mod test {
         let orange = String::from("orange");
 
         let apple_lpush_response = db.lpush(&key, &[apple].to_owned().to_vec());
-        assert_eq!(apple_lpush_response, Response::AffectedKeys { affected_keys: 1 });
+        assert_eq!(
+            apple_lpush_response,
+            Response::AffectedKeys { affected_keys: 1 }
+        );
 
         let llen_response = db.llen(&key);
         assert_eq!(llen_response, Response::Count { count: 1 });

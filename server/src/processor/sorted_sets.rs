@@ -18,9 +18,13 @@ impl InMemoryDb {
             if let DbValue::SortedSet(sorted_set) = sorted_set_ref.value_mut() {
                 let affected_rows =
                     sorted_set.add_all(values.to_owned(), Some(SortedSetAddReturnType::Added));
-                Response::AffectedKeys { affected_keys: affected_rows as u64 }
+                Response::AffectedKeys {
+                    affected_keys: affected_rows as u64,
+                }
             } else {
-                Response::Err{error: IncompatibleDataType}
+                Response::Err {
+                    error: IncompatibleDataType,
+                }
             }
         } else {
             let mut sorted_set = SortedSet::new();
@@ -28,19 +32,25 @@ impl InMemoryDb {
                 sorted_set.add_all(values.to_owned(), Some(SortedSetAddReturnType::Added));
             self.data
                 .insert(key.to_string(), DbValue::SortedSet(sorted_set));
-            Response::AffectedKeys { affected_keys: affected_rows as u64 }
+            Response::AffectedKeys {
+                affected_keys: affected_rows as u64,
+            }
         }
     }
 
     pub(crate) fn zcard(&self, key: &String) -> Response {
         if let Some(sorted_set_ref) = self.get_sorted_set_ref(&key) {
             if let DbValue::SortedSet(sorted_set) = sorted_set_ref.value() {
-                Response::Count { count: sorted_set.cardinality() as u64 }
+                Response::Count {
+                    count: sorted_set.cardinality() as u64,
+                }
             } else {
-                Response::Err{error: IncompatibleDataType}
+                Response::Err {
+                    error: IncompatibleDataType,
+                }
             }
         } else {
-            Response::Err{error: UnknownKey}
+            Response::Err { error: UnknownKey }
         }
     }
 }

@@ -12,7 +12,7 @@ readme.workspace = true
 [dependencies]
 dashmap = { version = "6.0.1" }
 rand = "0.8.5"
-serde = { version = "1.0.204", default-features = false, features = ["derive", "std"] }
+serde = { version = "1.0.205", default-features = false, features = ["derive", "std"] }
 serde_json = { version = "1.0.122", default-features = false, features = ["alloc"] }
 tokio = { version = "1.39.2", default-features = false, features = ["tokio-macros", "net", "rt-multi-thread", "sync", "macros", "io-util"] }
 pouch-sdk = { path = "../sdk", version = "0.2.4" }

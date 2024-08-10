@@ -30,6 +30,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup Rust target
-        run: rustup target add ${{ matrix.target }}
+        run: |
+          apt install -y gcc-aarch64-linux-gnu
+          rustup target add ${{ matrix.target }}
       - name: Build
         run: cargo build --target=${{ matrix.target }}

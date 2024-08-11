@@ -63,23 +63,27 @@ impl InMemoryDb {
         }
     }
 
-    pub(crate) fn set(&self, key: &String, value: &String, expiry_seconds: &u64) -> Response {
-        match SystemTime::now().duration_since(UNIX_EPOCH) {
-            Ok(now) => {
-                let expiry_ts = now.as_secs() + expiry_seconds;
-                self.data.insert(
-                    key.to_string(),
-                    DbValue::String {
-                        value: value.to_string(),
-                        expiry_ts,
-                    },
-                );
-                Response::AffectedKeys { affected_keys: 1 }
+    pub(crate) fn set(&self, key: &String, value: &String, expiry_ts: &u64, expiry_seconds: &u64) -> Response {
+        let expiry_ts: u64 = if *expiry_ts == 0 {
+            match SystemTime::now().duration_since(UNIX_EPOCH) {
+                Ok(now) => {
+                    now.as_secs() + expiry_seconds
+                }
+                Err(_err) => return Response::Err {
+                    error: TimeWentBackwards,
+                },
             }
-            Err(_err) => Response::Err {
-                error: TimeWentBackwards,
+        } else {
+            *expiry_ts
+        };
+        self.data.insert(
+            key.to_string(),
+            DbValue::String {
+                value: value.to_string(),
+                expiry_ts,
             },
-        }
+        );
+        Response::AffectedKeys { affected_keys: 1 }
     }
 
     pub(crate) fn incr(&self, key: &String) -> Response {

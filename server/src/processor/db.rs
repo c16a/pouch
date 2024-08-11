@@ -117,7 +117,7 @@ impl Processor for InMemoryDb {
                     }
                 }
                 log_if_some!(wal, cmd);
-                self.set(key, value, expiry_seconds)
+                self.set(key, value, expiry_ts, expiry_seconds)
             }
             Command::Delete { ref keys } => {
                 log_if_some!(wal, cmd);
@@ -219,7 +219,7 @@ mod test {
             .expect("")
             .as_secs()
             + 100;
-        let response = db.set(&key, &value, &expiry_seconds);
+        let response = db.set(&key, &value, &(0u64), &expiry_seconds);
 
         assert_eq!(response, Response::AffectedKeys { affected_keys: 1 });
     }
@@ -236,7 +236,7 @@ mod test {
             .expect("")
             .as_secs()
             + 100;
-        let set_response = db.set(&key, &value, &expiry_seconds);
+        let set_response = db.set(&key, &value, &0u64, &expiry_seconds);
         assert_eq!(set_response, Response::AffectedKeys { affected_keys: 1 });
 
         let get_response = db.get(&key);
@@ -255,7 +255,7 @@ mod test {
             .expect("")
             .as_secs()
             + 100;
-        let set_response = db.set(&key, &value, &expiry_seconds);
+        let set_response = db.set(&key, &value, &0u64, &expiry_seconds);
         assert_eq!(set_response, Response::AffectedKeys { affected_keys: 1 });
 
         let get_response = db.get(&key);

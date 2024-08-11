@@ -4,17 +4,14 @@ use crate::wal::WAL;
 use dashmap::mapref::one::{Ref, RefMut};
 use dashmap::DashMap;
 use pouch_sdk::command::Command;
+use pouch_sdk::response::Error::TimeWentBackwards;
 use pouch_sdk::response::Response;
 use std::collections::HashSet;
 use std::io;
 use std::time::{SystemTime, UNIX_EPOCH};
-use pouch_sdk::response::Error::TimeWentBackwards;
 
 pub(crate) enum DbValue {
-    String {
-        value: String,
-        expiry_ts: u64,
-    },
+    String { value: String, expiry_ts: u64 },
     List(Vec<String>),
     Set(HashSet<String>),
     SortedSet(SortedSet<String>),
@@ -94,16 +91,28 @@ impl Processor for InMemoryDb {
                 log_if_some!(wal, cmd);
                 self.get_del(key)
             }
-            Command::Set { ref key, ref value, ref expiry_seconds, ref expiry_ts } => {
-                let mut cmd= cmd.clone();
+            Command::Set {
+                ref key,
+                ref value,
+                ref expiry_seconds,
+                ref expiry_ts,
+            } => {
+                let mut cmd = cmd.clone();
                 if *expiry_ts == 0 {
                     match SystemTime::now().duration_since(UNIX_EPOCH) {
                         Ok(now) => {
                             let expiry_ts = now.as_secs() + expiry_seconds;
-                            cmd = Command::Set { key: key.to_string(), value: value.to_string(), expiry_seconds: *expiry_seconds, expiry_ts };
+                            cmd = Command::Set {
+                                key: key.to_string(),
+                                value: value.to_string(),
+                                expiry_seconds: *expiry_seconds,
+                                expiry_ts,
+                            };
                         }
                         Err(_err) => {
-                            return Response::Err { error: TimeWentBackwards }
+                            return Response::Err {
+                                error: TimeWentBackwards,
+                            }
                         }
                     }
                 }
@@ -205,7 +214,11 @@ mod test {
 
         let key = String::from("name");
         let value = String::from("c16a");
-        let expiry_seconds = SystemTime::now().duration_since(UNIX_EPOCH).expect("").as_secs() + 100;
+        let expiry_seconds = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("")
+            .as_secs()
+            + 100;
         let response = db.set(&key, &value, &expiry_seconds);
 
         assert_eq!(response, Response::AffectedKeys { affected_keys: 1 });
@@ -218,7 +231,11 @@ mod test {
         let key = String::from("name");
         let value = String::from("c16a");
 
-        let expiry_seconds = SystemTime::now().duration_since(UNIX_EPOCH).expect("").as_secs() + 100;
+        let expiry_seconds = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("")
+            .as_secs()
+            + 100;
         let set_response = db.set(&key, &value, &expiry_seconds);
         assert_eq!(set_response, Response::AffectedKeys { affected_keys: 1 });
 
@@ -233,7 +250,11 @@ mod test {
         let key = String::from("name");
         let value = String::from("c16a");
 
-        let expiry_seconds = SystemTime::now().duration_since(UNIX_EPOCH).expect("").as_secs() + 100;
+        let expiry_seconds = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("")
+            .as_secs()
+            + 100;
         let set_response = db.set(&key, &value, &expiry_seconds);
         assert_eq!(set_response, Response::AffectedKeys { affected_keys: 1 });
 

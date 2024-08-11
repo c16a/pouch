@@ -18,4 +18,6 @@ tokio = { version = "1.39.2", default-features = false, features = ["tokio-macro
 pouch-sdk = { path = "../sdk", version = "0.3.0" }
 tokio-tungstenite = "0.23.1"
 futures-util = "0.3.30"
-openraft = { version = "0.9.13", features = ["storage-v2"] }
+libp2p = { version = "0.54.0", features = ["async-std", "dns", "kad", "mdns", "noise", "macros", "tcp", "yamux"] }
+async-std = "1.12.0"
+futures = "0.3.30"

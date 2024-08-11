@@ -20,9 +20,9 @@ impl InMemoryDb {
                                 }
                             }
                         }
-                        Err(_err) => {
-                            Response::Err { error: TimeWentBackwards }
-                        }
+                        Err(_err) => Response::Err {
+                            error: TimeWentBackwards,
+                        },
                     }
                 }
                 _ => Response::Err {
@@ -49,9 +49,9 @@ impl InMemoryDb {
                                 }
                             }
                         }
-                        Err(_err) => {
-                            Response::Err { error: TimeWentBackwards }
-                        }
+                        Err(_err) => Response::Err {
+                            error: TimeWentBackwards,
+                        },
                     }
                 }
                 _ => Response::Err {
@@ -67,13 +67,18 @@ impl InMemoryDb {
         match SystemTime::now().duration_since(UNIX_EPOCH) {
             Ok(now) => {
                 let expiry_ts = now.as_secs() + expiry_seconds;
-                self.data
-                    .insert(key.to_string(), DbValue::String { value: value.to_string(), expiry_ts });
+                self.data.insert(
+                    key.to_string(),
+                    DbValue::String {
+                        value: value.to_string(),
+                        expiry_ts,
+                    },
+                );
                 Response::AffectedKeys { affected_keys: 1 }
             }
-            Err(_err) => {
-                Response::Err { error: TimeWentBackwards }
-            }
+            Err(_err) => Response::Err {
+                error: TimeWentBackwards,
+            },
         }
     }
 
@@ -83,8 +88,13 @@ impl InMemoryDb {
                 DbValue::String { value, expiry_ts } => match value.parse::<i64>() {
                     Ok(x) => {
                         let y = x + 1;
-                        self.data
-                            .insert(key.to_string(), DbValue::String { value: y.to_string(), expiry_ts: *expiry_ts });
+                        self.data.insert(
+                            key.to_string(),
+                            DbValue::String {
+                                value: y.to_string(),
+                                expiry_ts: *expiry_ts,
+                            },
+                        );
                         Response::IntValue { value: y }
                     }
                     Err(_err) => Response::Err { error: NotInteger },
@@ -104,8 +114,13 @@ impl InMemoryDb {
                 DbValue::String { value, expiry_ts } => match value.parse::<i64>() {
                     Ok(x) => {
                         let y = x + increment;
-                        self.data
-                            .insert(key.to_string(), DbValue::String { value: y.to_string(), expiry_ts: *expiry_ts });
+                        self.data.insert(
+                            key.to_string(),
+                            DbValue::String {
+                                value: y.to_string(),
+                                expiry_ts: *expiry_ts,
+                            },
+                        );
                         Response::IntValue { value: y }
                     }
                     Err(_err) => Response::Err { error: NotInteger },
@@ -125,8 +140,13 @@ impl InMemoryDb {
                 DbValue::String { value, expiry_ts } => match value.parse::<i64>() {
                     Ok(x) => {
                         let y = x - 1;
-                        self.data
-                            .insert(key.to_string(), DbValue::String { value: y.to_string(), expiry_ts: *expiry_ts });
+                        self.data.insert(
+                            key.to_string(),
+                            DbValue::String {
+                                value: y.to_string(),
+                                expiry_ts: *expiry_ts,
+                            },
+                        );
                         Response::IntValue { value: y }
                     }
                     Err(_err) => Response::Err { error: NotInteger },
@@ -146,8 +166,13 @@ impl InMemoryDb {
                 DbValue::String { value, expiry_ts } => match value.parse::<i64>() {
                     Ok(x) => {
                         let y = x - increment;
-                        self.data
-                            .insert(key.to_string(), DbValue::String { value: y.to_string(), expiry_ts: *expiry_ts });
+                        self.data.insert(
+                            key.to_string(),
+                            DbValue::String {
+                                value: y.to_string(),
+                                expiry_ts: *expiry_ts,
+                            },
+                        );
                         Response::IntValue { value: y }
                     }
                     Err(_err) => Response::Err { error: NotInteger },

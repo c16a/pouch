@@ -53,7 +53,7 @@ async fn handle_interactive_loop(mut stream: TcpStream) {
                 // Send the command to the server
                 // Don't write a new line explicitly because the user would hit the ENTER key themselves.
                 write_half.write_all(command.as_bytes()).await.expect("Failed to write to server");
-                
+
                 // Wait for the server response and print it back
                 if let Ok(Some(response)) = reader.next_line().await {
                     stdout.write_all(format!("pouch-server> {}\n", response).as_bytes()).await.unwrap();

@@ -1,0 +1,86 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+load("@rules_oci//oci:defs.bzl", "oci_image_index", "oci_load", "oci_push")
+load("//rules:oci.bzl", "multi_arch_go_image")
+
+go_library(
+    name = "lib",
+    srcs = ["main.go"],
+    importpath = "github.com/c16a/pouch/server",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//server/env",
+        "//server/peering",
+        "//server/store",
+        "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_binary(
+    name = "bin",
+    embed = [":lib"],
+    visibility = ["//visibility:public"],
+)
+
+multi_arch_go_image(
+    name = "app",
+    embed = [
+        ":lib",
+    ],
+    targets = [
+        {
+            "goos": "linux",
+            "goarch": "amd64",
+            "pure": "on",
+            "static": "on",
+        },
+        {
+            "goos": "linux",
+            "goarch": "arm64",
+            "pure": "on",
+            "static": "on",
+        },
+        #        {
+        #            "goos": "linux",
+        #            "goarch": "riscv64",
+        #            "pure": "on",
+        #            "static": "on",
+        #        },
+        {
+            "goos": "linux",
+            "goarch": "s390x",
+            "pure": "on",
+            "static": "on",
+        },
+        {
+            "goos": "linux",
+            "goarch": "ppc64le",
+            "pure": "on",
+            "static": "on",
+        },
+    ],
+)
+
+oci_image_index(
+    name = "image",
+    images = [
+        ":image_app_linux_amd64",
+        ":image_app_linux_arm64",
+        #        ":image_app_linux_riscv64",
+        ":image_app_linux_s390x",
+        ":image_app_linux_ppc64le",
+    ],
+)
+
+oci_load(
+    name = "image_tarball",
+    format = "oci",
+    image = ":image",
+    repo_tags = ["docker.io/c16a/pouch:latest"],
+)
+
+oci_push(
+    name = "push",
+    image = ":image",
+    remote_tags = ["latest"],
+    repository = "docker.io/c16a/pouch",
+)

@@ -1,0 +1,43 @@
+oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
+oci.pull(
+    name = "alpine",
+    digest = "sha256:0a4eaa0eecf5f8c050e5bba433f58c052be7587ee8af3e8b3910ef9ab5fbe9f5",
+    image = "docker.io/library/alpine",
+    platforms = [
+        "linux/amd64",
+        "linux/arm64/v8",
+        "linux/s390x",
+        "linux/riscv64",
+        "linux/ppc64le",
+    ],
+    tag = "3.20.2",
+)
+use_repo(
+    oci,
+    "alpine",
+    "alpine_linux_amd64",
+    "alpine_linux_arm64_v8",
+    "alpine_linux_ppc64le",
+    "alpine_linux_riscv64",
+    "alpine_linux_s390x",
+)
+oci.pull(
+    name = "nginx",
+    digest = "sha256:66943ac4a1ca7f111097d3c656939dfe8ae2bc8314bb45d6d80419c5fb25e304",
+    image = "docker.io/library/nginx",
+    platforms = [
+        "linux/amd64",
+        "linux/arm64/v8",
+        "linux/s390x",
+        "linux/ppc64le",
+    ],
+    tag = "1.27.0-alpine-slim",
+)
+use_repo(
+    oci,
+    "nginx",
+    "nginx_linux_amd64",
+    "nginx_linux_arm64_v8",
+    "nginx_linux_ppc64le",
+    "nginx_linux_s390x",
+)

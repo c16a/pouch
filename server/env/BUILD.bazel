@@ -1,0 +1,8 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "env",
+    srcs = ["variables.go"],
+    importpath = "github.com/c16a/pouch/server/env",
+    visibility = ["//visibility:public"],
+)

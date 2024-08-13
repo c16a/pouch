@@ -34,57 +34,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run tests
-        run: cargo test
-  release-linux:
-    strategy:
-      matrix:
-        target:
-          - aarch64-unknown-linux-gnu
-          - x86_64-unknown-linux-gnu
-    name: Build ${{ matrix.target }} release binary
+        run: bazelisk test //...
+  build:
+    name: Build
     runs-on: ubuntu-latest
     needs:
       - test
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Rust target
-        run: |
-          sudo apt update
-          sudo apt install -y gcc-aarch64-linux-gnu
-          rustup target add ${{ matrix.target }}
       - name: Build
-        run: cargo build --target=${{ matrix.target }} --release
-  release-macos:
-    strategy:
-      matrix:
-        target:
-          - aarch64-apple-darwin
-          - x86_64-apple-darwin
-    name: Build ${{ matrix.target }} release binary
-    runs-on: macos-latest
-    needs:
-      - test
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Rust target
         run: |
-          rustup target add ${{ matrix.target }}
-      - name: Build
-        run: cargo build --target=${{ matrix.target }} --release
-  release-windows:
-    strategy:
-      matrix:
-        target:
-          - aarch64-pc-windows-msvc
-          - x86_64-pc-windows-msvc
-    name: Build ${{ matrix.target }} release binary
-    runs-on: windows-latest
-    needs:
-      - test
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Rust target
-        run: |
-          rustup target add ${{ matrix.target }}
-      - name: Build
-        run: cargo build --target=${{ matrix.target }} --release
+          bazelisk build //...

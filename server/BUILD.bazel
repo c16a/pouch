@@ -9,6 +9,7 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//server/env",
+        "//server/handlers",
         "//server/peering",
         "//server/store",
         "@com_github_google_uuid//:uuid",

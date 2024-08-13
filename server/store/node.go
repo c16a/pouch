@@ -2,7 +2,9 @@ package store
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/c16a/pouch/sdk/commands"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
 	"io"
@@ -91,50 +93,100 @@ func (node *Node) Open(enableSingle bool, localID string) error {
 	return nil
 }
 
+func (node *Node) ApplyCmd(cmd commands.Command) string {
+	switch cmd.GetAction() {
+	case commands.Get:
+		return node.Get(cmd.(*commands.GetCommand))
+	case commands.Set:
+		return node.Set(cmd.(*commands.SetCommand))
+	case commands.Del:
+		return node.Delete(cmd.(*commands.DelCommand))
+	default:
+		return (&commands.ErrorResponse{Err: errors.New("unknown command")}).String()
+	}
+}
+
 // Get returns the value for the given key.
-func (node *Node) Get(key string) (string, error) {
+func (node *Node) Get(cmd *commands.GetCommand) string {
 	node.mu.Lock()
 	defer node.mu.Unlock()
-	return node.m[key], nil
+	if val, ok := node.m[cmd.Key]; ok {
+		response := &commands.StringResponse{Value: val}
+		return response.String()
+	} else {
+		return (&commands.NilResponse{}).String()
+	}
 }
 
 // Set sets the value for the given key.
-func (node *Node) Set(key, value string) error {
+func (node *Node) Set(cmd *commands.SetCommand) string {
 	if node.raft.State() != raft.Leader {
-		return fmt.Errorf("not leader")
+		leaderAddr, id := node.raft.LeaderWithID()
+		err := node.sendToLeaderViaUdp(cmd, leaderAddr, id)
+		if err != nil {
+			response := &commands.ErrorResponse{Err: err}
+			return response.String()
+		}
+		response := &commands.CountResponse{Count: 1}
+		return response.String()
 	}
 
-	c := &command{
-		Op:    "set",
-		Key:   key,
-		Value: value,
-	}
-	b, err := json.Marshal(c)
-	if err != nil {
-		return err
-	}
+	b := []byte(cmd.String())
 
 	f := node.raft.Apply(b, raftTimeout)
-	return f.Error()
+	if err := f.Error(); err != nil {
+		response := &commands.ErrorResponse{Err: err}
+		return response.String()
+	}
+	response := &commands.CountResponse{Count: 1}
+	return response.String()
 }
 
 // Delete deletes the given key.
-func (node *Node) Delete(key string) error {
+func (node *Node) Delete(cmd *commands.DelCommand) string {
 	if node.raft.State() != raft.Leader {
-		return fmt.Errorf("not leader")
+		leaderAddr, id := node.raft.LeaderWithID()
+		err := node.sendToLeaderViaUdp(cmd, leaderAddr, id)
+		if err != nil {
+			response := &commands.ErrorResponse{Err: err}
+			return response.String()
+		}
+		response := &commands.CountResponse{Count: 1}
+		return response.String()
 	}
 
-	c := &command{
-		Op:  "delete",
-		Key: key,
+	b := []byte(cmd.String())
+
+	f := node.raft.Apply(b, raftTimeout)
+	if err := f.Error(); err != nil {
+		response := &commands.ErrorResponse{Err: err}
+		return response.String()
 	}
-	b, err := json.Marshal(c)
+	response := &commands.CountResponse{Count: 1}
+	return response.String()
+}
+
+func (node *Node) sendToLeaderViaUdp(cmd commands.Command, addr raft.ServerAddress, id raft.ServerID) error {
+	udpAddr, err := net.ResolveUDPAddr("udp", string(addr))
 	if err != nil {
 		return err
 	}
 
-	f := node.raft.Apply(b, raftTimeout)
-	return f.Error()
+	conn, err := net.DialUDP("udp", nil, udpAddr)
+	if err != nil {
+		return err
+	}
+
+	defer conn.Close()
+
+	_, err = conn.Write([]byte(cmd.String()))
+	if err != nil {
+		return err
+	}
+
+	var responseBytes = make([]byte, 1024)
+	_, err = conn.Read(responseBytes)
+	return nil
 }
 
 // Join joins a node, identified by nodeID and located at addr, to this store.
@@ -178,18 +230,18 @@ type fsm Node
 
 // Apply applies a Raft log entry to the key-value store.
 func (node *Node) Apply(l *raft.Log) interface{} {
-	var c command
-	if err := json.Unmarshal(l.Data, &c); err != nil {
-		panic(fmt.Sprintf("failed to unmarshal command: %s", err.Error()))
+	cmd, err := commands.ParseStringIntoCommand(string(l.Data))
+	if err != nil {
+		return err
 	}
 
-	switch c.Op {
-	case "set":
-		return node.applySet(c.Key, c.Value)
-	case "delete":
-		return node.applyDelete(c.Key)
+	switch cmd.GetAction() {
+	case commands.Set:
+		return node.applySet(cmd.(*commands.SetCommand))
+	case commands.Del:
+		return node.applyDelete(cmd.(*commands.DelCommand))
 	default:
-		panic(fmt.Sprintf("unrecognized command op: %s", c.Op))
+		panic(fmt.Sprintf("unrecognized command op: %s", cmd.GetAction()))
 	}
 }
 
@@ -219,16 +271,16 @@ func (node *Node) Restore(rc io.ReadCloser) error {
 	return nil
 }
 
-func (node *Node) applySet(key, value string) interface{} {
+func (node *Node) applySet(cmd *commands.SetCommand) interface{} {
 	node.mu.Lock()
 	defer node.mu.Unlock()
-	node.m[key] = value
+	node.m[cmd.Key] = cmd.Value
 	return nil
 }
 
-func (node *Node) applyDelete(key string) interface{} {
+func (node *Node) applyDelete(cmd *commands.DelCommand) interface{} {
 	node.mu.Lock()
 	defer node.mu.Unlock()
-	delete(node.m, key)
+	delete(node.m, cmd.Key)
 	return nil
 }

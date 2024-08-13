@@ -1,0 +1,11 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "commands",
+    srcs = [
+        "command.go",
+        "log.go",
+    ],
+    importpath = "github.com/c16a/pouch/sdk/commands",
+    visibility = ["//visibility:public"],
+)

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/c16a/pouch/server/env"
+	"github.com/c16a/pouch/server/handlers"
 	"github.com/c16a/pouch/server/peering"
 	"github.com/c16a/pouch/server/store"
 	"github.com/google/uuid"
@@ -49,20 +50,14 @@ func main() {
 		nodeId = id.String()
 	}
 
-	s := store.New()
-	s.RaftDir = raftPath
-	s.RaftBind = raftAddr
-	if err := s.Open(enableSingle, nodeId); err != nil {
+	node := store.New()
+	node.RaftDir = raftPath
+	node.RaftBind = raftAddr
+	if err := node.Open(enableSingle, nodeId); err != nil {
 		log.Fatalf("failed to open store: %s", err.Error())
 	}
-	go peering.InitPeer(nodeId, peerAddr, s)
-
-	httpAddr := os.Getenv(env.HttpAddr)
-
-	h := store.NewService(httpAddr, s)
-	if err := h.Start(); err != nil {
-		log.Fatalf("failed to start HTTP service: %s", err.Error())
-	}
+	go peering.InitPeer(nodeId, peerAddr, node)
+	go handlers.StartTcpListener(node)
 
 	terminate := make(chan os.Signal, 1)
 	signal.Notify(terminate, os.Interrupt, os.Kill)

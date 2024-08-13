@@ -1,9 +1,9 @@
 load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "peering",
-    srcs = ["udp.go"],
-    importpath = "github.com/c16a/pouch/server/peering",
+    name = "handlers",
+    srcs = ["tcp.go"],
+    importpath = "github.com/c16a/pouch/server/handlers",
     visibility = ["//visibility:public"],
     deps = [
         "//sdk/commands",

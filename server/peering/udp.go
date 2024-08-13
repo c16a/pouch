@@ -4,20 +4,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/c16a/pouch/sdk/commands"
 	"github.com/c16a/pouch/server/env"
 	"github.com/c16a/pouch/server/store"
 	"net"
 	"os"
 )
 
-func InitPeer(nodeId string, peerAddr string, s *store.Node) {
+func InitPeer(nodeId string, peerAddr string, node *store.Node) {
 	err := dialPeer(nodeId, peerAddr)
 	if err != nil {
 		fmt.Println("Failed to dial peer:", err)
 	}
 
 	// This blocks
-	go startPeeringServer(s)
+	go startPeeringServer(node)
 }
 
 func dialPeer(nodeId string, peerAddr string) error {
@@ -38,14 +39,8 @@ func dialPeer(nodeId string, peerAddr string) error {
 		return errors.New("no raft address")
 	}
 
-	joinRequest := &JoinRequest{NodeId: nodeId, Addr: raftAddr}
-
-	joinRequestBytes, err := json.Marshal(joinRequest)
-	if err != nil {
-		return err
-	}
-
-	_, err = conn.Write(joinRequestBytes)
+	joinRequest := commands.NewJoinCommand(nodeId, raftAddr)
+	_, err = conn.Write([]byte(joinRequest))
 	if err != nil {
 		return err
 	}
@@ -74,19 +69,6 @@ func startPeeringServer(s *store.Node) error {
 	return nil
 }
 
-// JoinRequest is an incoming request from another node
-//
-// The underlying store will then add the remote node into its list.
-type JoinRequest struct {
-	NodeId string `json:"nodeId"` // The identifier of the node which is trying to connect to the current node
-	Addr   string `json:"addr"`   // The address at which the remote node is reachable over the Raft network
-}
-
-type JoinResponse struct {
-	OK  bool  `json:"ok"`
-	Err error `json:"err"`
-}
-
 func handleUdpConnection(conn *net.UDPConn, s *store.Node) {
 	for {
 		buf := make([]byte, 1024)
@@ -95,30 +77,76 @@ func handleUdpConnection(conn *net.UDPConn, s *store.Node) {
 			continue
 		}
 
-		var req JoinRequest
-		err = json.Unmarshal(buf[:n], &req)
+		cmd, err := commands.ParseStringIntoCommand(string(buf[:n]))
 		if err != nil {
 			continue
 		}
 
-		fmt.Printf("incoming UDP packet from %s, length %d\n", addr.String(), n)
-
-		joinResponse := &JoinResponse{
-			OK: false,
+		switch cmd.GetAction() {
+		case commands.Join:
+			handleJoin(buf, n, s, conn, addr)
+		default:
+			handleLog(buf, n, s, conn, addr)
 		}
-		if err := s.Join(req.NodeId, req.Addr); err != nil {
+	}
+}
+
+func handleLog(buf []byte, n int, node *store.Node, conn *net.UDPConn, addr *net.UDPAddr) {
+	var strResponse string
+
+	defer func() {
+		if _, err := conn.WriteToUDP([]byte(strResponse), addr); err != nil {
+			fmt.Println("Failed to write log response:", err)
+		}
+	}()
+
+	c, err := commands.ParseStringIntoCommand(string(buf[:n]))
+	if err != nil {
+		strResponse = (&commands.ErrorResponse{Err: err}).String()
+		return
+	}
+
+	switch c.GetAction() {
+	case commands.Set:
+		setCommand := c.(*commands.SetCommand)
+		res := node.Set(setCommand)
+		strResponse = res
+	case commands.Del:
+		delCommand := c.(*commands.DelCommand)
+		res := node.Delete(delCommand)
+		strResponse = res
+	}
+}
+
+func handleJoin(buf []byte, n int, s *store.Node, conn *net.UDPConn, addr *net.UDPAddr) {
+	joinResponse := &commands.JoinResponse{
+		OK: false,
+	}
+
+	defer func() {
+		responseBytes, err := json.Marshal(joinResponse)
+		if err != nil {
+			fmt.Println("Failed to marshal join response:", err)
+		}
+
+		if _, err := conn.WriteToUDP(responseBytes, addr); err != nil {
+			fmt.Println("Failed to write join response:", err)
+		}
+	}()
+
+	command, err := commands.ParseStringIntoCommand(string(buf[:n]))
+	if err != nil {
+		joinResponse.Err = err
+		return
+	}
+
+	if joinCmd, ok := command.(*commands.JoinCommand); ok {
+		if err := s.Join(joinCmd.NodeId, joinCmd.Addr); err != nil {
 			joinResponse.Err = err
 		} else {
 			joinResponse.OK = true
 		}
-
-		responseBytes, err := json.Marshal(joinResponse)
-		if err != nil {
-			continue
-		}
-
-		if _, err := conn.WriteToUDP(responseBytes, addr); err != nil {
-			fmt.Printf("failed to send join response: %s\n", err)
-		}
+	} else {
+		joinResponse.Err = fmt.Errorf("unknown command: %v", command)
 	}
 }

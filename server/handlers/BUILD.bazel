@@ -2,12 +2,16 @@ load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "handlers",
-    srcs = ["tcp.go"],
+    srcs = [
+        "tcp.go",
+        "ws.go",
+    ],
     importpath = "github.com/c16a/pouch/server/handlers",
     visibility = ["//visibility:public"],
     deps = [
         "//sdk/commands",
         "//server/env",
         "//server/store",
+        "@com_github_gorilla_websocket//:websocket",
     ],
 )

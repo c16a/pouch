@@ -3,6 +3,7 @@ package env
 const (
 	NodeId   = "NODE_ID"
 	TcpAddr  = "TCP_ADDR"
+	WsAddr   = "WS_ADDR"
 	RaftAddr = "RAFT_ADDR" // This is the advertised address for Raft peers
 	PeerAddr = "PEER_ADDR" // This optionally lets the current node dial a peer during boot up
 	RaftDir  = "RAFT_DIR"

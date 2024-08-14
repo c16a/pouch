@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/c16a/pouch/sdk/commands"
+	"github.com/c16a/pouch/server/env"
+	"github.com/google/uuid"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
 	"io"
@@ -26,24 +28,51 @@ type Node struct {
 
 	raft *raft.Raft // The consensus mechanism
 
-	logger *log.Logger
+	logger  *log.Logger
+	localID string
 }
 
-// New returns a new Node.
-func New() *Node {
+// NewNode returns a new Node.
+func NewNode() *Node {
+	raftPath := os.Getenv(env.RaftDir)
+	if raftPath == "" {
+		log.Fatalf("Environment variable %s is not set\n", env.RaftDir)
+	}
+
+	raftAddr := os.Getenv(env.RaftAddr)
+	if raftAddr == "" {
+		log.Fatalf("Environment variable %s is not set\n", env.RaftAddr)
+	}
+
+	nodeId := os.Getenv(env.NodeId)
+	if nodeId == "" {
+		id, err := uuid.NewV7()
+		if err != nil {
+			log.Fatalf("failed to generate node id: %s", err.Error())
+		}
+		nodeId = id.String()
+	}
+
+	if err := os.MkdirAll(raftPath, 0700); err != nil {
+		log.Fatalf("failed to create path for Raft storage: %s", err.Error())
+	}
+
 	return &Node{
-		m:      make(map[string]string),
-		logger: log.New(os.Stderr, "[store] ", log.LstdFlags),
+		RaftDir:  raftPath,
+		RaftBind: raftAddr,
+		localID:  nodeId,
+		m:        make(map[string]string),
+		logger:   log.New(os.Stderr, "[store] ", log.LstdFlags),
 	}
 }
 
-// Open opens the store. If enableSingle is set, and there are no existing peers,
+// Start opens the store. If enableSingle is set, and there are no existing peers,
 // then this node becomes the first node, and therefore leader, of the cluster.
 // localID should be the server identifier for this node.
-func (node *Node) Open(enableSingle bool, localID string) error {
+func (node *Node) Start(enableSingle bool) error {
 	// Setup Raft configuration.
 	config := raft.DefaultConfig()
-	config.LocalID = raft.ServerID(localID)
+	config.LocalID = raft.ServerID(node.localID)
 
 	// Setup Raft communication.
 	addr, err := net.ResolveTCPAddr("tcp", node.RaftBind)
@@ -283,4 +312,144 @@ func (node *Node) applyDelete(cmd *commands.DelCommand) interface{} {
 	defer node.mu.Unlock()
 	delete(node.m, cmd.Key)
 	return nil
+}
+
+func (node *Node) initPeer(nodeId string, peerAddr string) {
+	err := dialPeer(nodeId, peerAddr)
+	if err != nil {
+		fmt.Println("Failed to dial peer:", err)
+	}
+
+	// This blocks
+	go node.startPeeringServer()
+}
+
+func dialPeer(nodeId string, peerAddr string) error {
+	udpAddr, err := net.ResolveUDPAddr("udp", peerAddr)
+	if err != nil {
+		return err
+	}
+
+	conn, err := net.DialUDP("udp", nil, udpAddr)
+	if err != nil {
+		return err
+	}
+
+	defer conn.Close()
+
+	raftAddr := os.Getenv(env.RaftAddr)
+	if raftAddr == "" {
+		return errors.New("no raft address")
+	}
+
+	joinRequest := commands.NewJoinCommand(nodeId, raftAddr)
+	_, err = conn.Write([]byte(joinRequest))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// startPeeringServer will start a peering server and keep it open
+func (node *Node) startPeeringServer() error {
+	peeringPort := os.Getenv(env.RaftAddr)
+	if peeringPort == "" {
+		return fmt.Errorf("environment variable %s not set", env.RaftAddr)
+	}
+
+	udpAddr, err := net.ResolveUDPAddr("udp", peeringPort)
+	if err != nil {
+		return err
+	}
+
+	conn, err := net.ListenUDP("udp", udpAddr)
+	if err != nil {
+		return err
+	}
+
+	go handleUdpConnection(conn, node)
+	return nil
+}
+
+func handleUdpConnection(conn *net.UDPConn, s *Node) {
+	for {
+		buf := make([]byte, 1024)
+		n, addr, err := conn.ReadFromUDP(buf)
+		if err != nil {
+			continue
+		}
+
+		cmd, err := commands.ParseStringIntoCommand(string(buf[:n]))
+		if err != nil {
+			continue
+		}
+
+		switch cmd.GetAction() {
+		case commands.Join:
+			handleJoin(buf, n, s, conn, addr)
+		default:
+			handleLog(buf, n, s, conn, addr)
+		}
+	}
+}
+
+func handleLog(buf []byte, n int, node *Node, conn *net.UDPConn, addr *net.UDPAddr) {
+	var strResponse string
+
+	defer func() {
+		if _, err := conn.WriteToUDP([]byte(strResponse), addr); err != nil {
+			fmt.Println("Failed to write log response:", err)
+		}
+	}()
+
+	c, err := commands.ParseStringIntoCommand(string(buf[:n]))
+	if err != nil {
+		strResponse = (&commands.ErrorResponse{Err: err}).String()
+		return
+	}
+
+	switch c.GetAction() {
+	case commands.Set:
+		setCommand := c.(*commands.SetCommand)
+		res := node.Set(setCommand)
+		strResponse = res
+	case commands.Del:
+		delCommand := c.(*commands.DelCommand)
+		res := node.Delete(delCommand)
+		strResponse = res
+	}
+}
+
+func handleJoin(buf []byte, n int, s *Node, conn *net.UDPConn, addr *net.UDPAddr) {
+	joinResponse := &commands.JoinResponse{
+		OK: false,
+	}
+
+	defer func() {
+		responseBytes, err := json.Marshal(joinResponse)
+		if err != nil {
+			fmt.Println("Failed to marshal join response:", err)
+		}
+
+		if _, err := conn.WriteToUDP(responseBytes, addr); err != nil {
+			fmt.Println("Failed to write join response:", err)
+		}
+	}()
+
+	command, err := commands.ParseStringIntoCommand(string(buf[:n]))
+	if err != nil {
+		joinResponse.Err = err
+		return
+	}
+
+	if joinCmd, ok := command.(*commands.JoinCommand); ok {
+		if err := s.Join(joinCmd.NodeId, joinCmd.Addr); err != nil {
+			joinResponse.Err = err
+		} else {
+			joinResponse.OK = true
+		}
+	} else {
+		joinResponse.Err = fmt.Errorf("unknown command: %v", command)
+	}
 }

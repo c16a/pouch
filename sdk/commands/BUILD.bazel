@@ -4,7 +4,12 @@ go_library(
     name = "commands",
     srcs = [
         "command.go",
+        "common.go",
+        "join.go",
+        "lists.go",
         "log.go",
+        "sets.go",
+        "strings.go",
     ],
     importpath = "github.com/c16a/pouch/sdk/commands",
     visibility = ["//visibility:public"],

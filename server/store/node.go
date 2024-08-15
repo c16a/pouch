@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/c16a/pouch/sdk/commands"
+	"github.com/c16a/pouch/server/datatypes"
 	"github.com/c16a/pouch/server/env"
 	"github.com/google/uuid"
 	"github.com/hashicorp/raft"
@@ -24,7 +25,7 @@ type Node struct {
 	RaftBind string
 
 	mu sync.Mutex
-	m  map[string]string // The key-value store for the system.
+	m  map[string]datatypes.Type // The key-value store for the system.
 
 	raft *raft.Raft // The consensus mechanism
 
@@ -61,7 +62,7 @@ func NewNode() *Node {
 		RaftDir:  raftPath,
 		RaftBind: raftAddr,
 		localID:  nodeId,
-		m:        make(map[string]string),
+		m:        make(map[string]datatypes.Type),
 		logger:   log.New(os.Stderr, "[store] ", log.LstdFlags),
 	}
 }
@@ -119,6 +120,8 @@ func (node *Node) Start(enableSingle bool) error {
 		ra.BootstrapCluster(configuration)
 	}
 
+	node.initPeer(node.localID)
+
 	return nil
 }
 
@@ -130,6 +133,32 @@ func (node *Node) ApplyCmd(cmd commands.Command) string {
 		return node.Set(cmd.(*commands.SetCommand))
 	case commands.Del:
 		return node.Delete(cmd.(*commands.DelCommand))
+	case commands.LPush:
+		return node.LPush(cmd.(*commands.LPushCommand))
+	case commands.RPush:
+		return node.RPush(cmd.(*commands.RPushCommand))
+	case commands.LLen:
+		return node.LLen(cmd.(*commands.LLenCommand))
+	case commands.RPop:
+		return node.RPop(cmd.(*commands.RPopCommand))
+	case commands.LPop:
+		return node.LPop(cmd.(*commands.LPopCommand))
+	case commands.LRange:
+		return node.LRange(cmd.(*commands.LRangeCommand))
+	case commands.SAdd:
+		return node.SAdd(cmd.(*commands.SAddCommand))
+	case commands.SCard:
+		return node.SCard(cmd.(*commands.SCardCommand))
+	case commands.SIsMember:
+		return node.SIsMember(cmd.(*commands.SIsMemberCommand))
+	case commands.SMembers:
+		return node.SMembers(cmd.(*commands.SMembersCommand))
+	case commands.SInter:
+		return node.SInter(cmd.(*commands.SInterCommand))
+	case commands.SDiff:
+		return node.SDiff(cmd.(*commands.SDiffCommand))
+	case commands.SUnion:
+		return node.SUnion(cmd.(*commands.SUnionCommand))
 	default:
 		return (&commands.ErrorResponse{Err: errors.New("unknown command")}).String()
 	}
@@ -140,24 +169,27 @@ func (node *Node) Get(cmd *commands.GetCommand) string {
 	node.mu.Lock()
 	defer node.mu.Unlock()
 	if val, ok := node.m[cmd.Key]; ok {
-		response := &commands.StringResponse{Value: val}
-		return response.String()
+		switch {
+		case val.GetName() == "string":
+			strVal := val.(*datatypes.String)
+			response := &commands.StringResponse{Value: strVal.GetName()}
+			return response.String()
+		default:
+			return (&commands.ErrorResponse{Err: commands.ErrorInvalidDataType}).String()
+		}
 	} else {
 		return (&commands.NilResponse{}).String()
 	}
 }
 
-// Set sets the value for the given key.
-func (node *Node) Set(cmd *commands.SetCommand) string {
+// respondAfterRaftCommit is invoked for any command that needs consensus.
+//
+// For followers, it automatically relays the command to the current leader and returns their response.
+//
+// For leaders, it commits to its own Raft log and responds.
+func (node *Node) respondAfterRaftCommit(cmd commands.Command) string {
 	if node.raft.State() != raft.Leader {
-		leaderAddr, id := node.raft.LeaderWithID()
-		err := node.sendToLeaderViaUdp(cmd, leaderAddr, id)
-		if err != nil {
-			response := &commands.ErrorResponse{Err: err}
-			return response.String()
-		}
-		response := &commands.CountResponse{Count: 1}
-		return response.String()
+		return node.getResponseFromLeader(cmd)
 	}
 
 	b := []byte(cmd.String())
@@ -167,55 +199,43 @@ func (node *Node) Set(cmd *commands.SetCommand) string {
 		response := &commands.ErrorResponse{Err: err}
 		return response.String()
 	}
-	response := &commands.CountResponse{Count: 1}
-	return response.String()
+	return f.Response().(string)
+}
+
+// Set sets the value for the given key.
+func (node *Node) Set(cmd *commands.SetCommand) string {
+	return node.respondAfterRaftCommit(cmd)
 }
 
 // Delete deletes the given key.
 func (node *Node) Delete(cmd *commands.DelCommand) string {
-	if node.raft.State() != raft.Leader {
-		leaderAddr, id := node.raft.LeaderWithID()
-		err := node.sendToLeaderViaUdp(cmd, leaderAddr, id)
-		if err != nil {
-			response := &commands.ErrorResponse{Err: err}
-			return response.String()
-		}
-		response := &commands.CountResponse{Count: 1}
-		return response.String()
-	}
-
-	b := []byte(cmd.String())
-
-	f := node.raft.Apply(b, raftTimeout)
-	if err := f.Error(); err != nil {
-		response := &commands.ErrorResponse{Err: err}
-		return response.String()
-	}
-	response := &commands.CountResponse{Count: 1}
-	return response.String()
+	return node.respondAfterRaftCommit(cmd)
 }
 
-func (node *Node) sendToLeaderViaUdp(cmd commands.Command, addr raft.ServerAddress, id raft.ServerID) error {
+func (node *Node) sendToLeaderViaUdp(cmd commands.Command, addr raft.ServerAddress, id raft.ServerID) (string, error) {
 	udpAddr, err := net.ResolveUDPAddr("udp", string(addr))
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	conn, err := net.DialUDP("udp", nil, udpAddr)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	defer conn.Close()
 
 	_, err = conn.Write([]byte(cmd.String()))
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	var responseBytes = make([]byte, 1024)
 	_, err = conn.Read(responseBytes)
-	return nil
+	if err != nil {
+		return "", err
+	}
+	return string(responseBytes), nil
 }
 
 // Join joins a node, identified by nodeID and located at addr, to this store.
@@ -258,6 +278,8 @@ func (node *Node) Join(nodeID, addr string) error {
 type fsm Node
 
 // Apply applies a Raft log entry to the key-value store.
+//
+// This command should only process the commands which mutate the key-value store
 func (node *Node) Apply(l *raft.Log) interface{} {
 	cmd, err := commands.ParseStringIntoCommand(string(l.Data))
 	if err != nil {
@@ -269,6 +291,16 @@ func (node *Node) Apply(l *raft.Log) interface{} {
 		return node.applySet(cmd.(*commands.SetCommand))
 	case commands.Del:
 		return node.applyDelete(cmd.(*commands.DelCommand))
+	case commands.LPush:
+		return node.applyLPush(cmd.(*commands.LPushCommand))
+	case commands.RPush:
+		return node.applyRPush(cmd.(*commands.RPushCommand))
+	case commands.LPop:
+		return node.applyLpop(cmd.(*commands.LPopCommand))
+	case commands.RPop:
+		return node.applyRpop(cmd.(*commands.RPopCommand))
+	case commands.SAdd:
+		return node.applySADD(cmd.(*commands.SAddCommand))
 	default:
 		panic(fmt.Sprintf("unrecognized command op: %s", cmd.GetAction()))
 	}
@@ -280,7 +312,7 @@ func (node *Node) Snapshot() (raft.FSMSnapshot, error) {
 	defer node.mu.Unlock()
 
 	// Clone the map.
-	o := make(map[string]string)
+	o := make(map[string]datatypes.Type)
 	for k, v := range node.m {
 		o[k] = v
 	}
@@ -289,7 +321,7 @@ func (node *Node) Snapshot() (raft.FSMSnapshot, error) {
 
 // Restore stores the key-value store to a previous state.
 func (node *Node) Restore(rc io.ReadCloser) error {
-	o := make(map[string]string)
+	o := make(map[string]datatypes.Type)
 	if err := json.NewDecoder(rc).Decode(&o); err != nil {
 		return err
 	}
@@ -303,21 +335,34 @@ func (node *Node) Restore(rc io.ReadCloser) error {
 func (node *Node) applySet(cmd *commands.SetCommand) interface{} {
 	node.mu.Lock()
 	defer node.mu.Unlock()
-	node.m[cmd.Key] = cmd.Value
-	return nil
+	node.m[cmd.Key] = datatypes.NewString(cmd.Value)
+	return (&commands.CountResponse{Count: 1}).String()
 }
 
 func (node *Node) applyDelete(cmd *commands.DelCommand) interface{} {
 	node.mu.Lock()
 	defer node.mu.Unlock()
 	delete(node.m, cmd.Key)
-	return nil
+	return (&commands.CountResponse{Count: 1}).String()
 }
 
-func (node *Node) initPeer(nodeId string, peerAddr string) {
-	err := dialPeer(nodeId, peerAddr)
+func (node *Node) getResponseFromLeader(cmd commands.Command) string {
+	leaderAddr, id := node.raft.LeaderWithID()
+	response, err := node.sendToLeaderViaUdp(cmd, leaderAddr, id)
 	if err != nil {
-		fmt.Println("Failed to dial peer:", err)
+		errResponse := &commands.ErrorResponse{Err: err}
+		return errResponse.String()
+	}
+	return response
+}
+
+func (node *Node) initPeer(nodeId string) {
+	peerAddr := os.Getenv(env.PeerAddr)
+	if peerAddr != "" {
+		err := dialPeer(nodeId, peerAddr)
+		if err != nil {
+			fmt.Println("Failed to dial peer:", err)
+		}
 	}
 
 	// This blocks
@@ -368,11 +413,11 @@ func (node *Node) startPeeringServer() error {
 		return err
 	}
 
-	go handleUdpConnection(conn, node)
+	go handlePeerMessage(conn, node)
 	return nil
 }
 
-func handleUdpConnection(conn *net.UDPConn, s *Node) {
+func handlePeerMessage(conn *net.UDPConn, s *Node) {
 	for {
 		buf := make([]byte, 1024)
 		n, addr, err := conn.ReadFromUDP(buf)
@@ -387,14 +432,14 @@ func handleUdpConnection(conn *net.UDPConn, s *Node) {
 
 		switch cmd.GetAction() {
 		case commands.Join:
-			handleJoin(buf, n, s, conn, addr)
+			handlePeerJoin(buf, n, s, conn, addr)
 		default:
-			handleLog(buf, n, s, conn, addr)
+			handlePeerLog(buf, n, s, conn, addr)
 		}
 	}
 }
 
-func handleLog(buf []byte, n int, node *Node, conn *net.UDPConn, addr *net.UDPAddr) {
+func handlePeerLog(buf []byte, n int, node *Node, conn *net.UDPConn, addr *net.UDPAddr) {
 	var strResponse string
 
 	defer func() {
@@ -409,47 +454,5 @@ func handleLog(buf []byte, n int, node *Node, conn *net.UDPConn, addr *net.UDPAd
 		return
 	}
 
-	switch c.GetAction() {
-	case commands.Set:
-		setCommand := c.(*commands.SetCommand)
-		res := node.Set(setCommand)
-		strResponse = res
-	case commands.Del:
-		delCommand := c.(*commands.DelCommand)
-		res := node.Delete(delCommand)
-		strResponse = res
-	}
-}
-
-func handleJoin(buf []byte, n int, s *Node, conn *net.UDPConn, addr *net.UDPAddr) {
-	joinResponse := &commands.JoinResponse{
-		OK: false,
-	}
-
-	defer func() {
-		responseBytes, err := json.Marshal(joinResponse)
-		if err != nil {
-			fmt.Println("Failed to marshal join response:", err)
-		}
-
-		if _, err := conn.WriteToUDP(responseBytes, addr); err != nil {
-			fmt.Println("Failed to write join response:", err)
-		}
-	}()
-
-	command, err := commands.ParseStringIntoCommand(string(buf[:n]))
-	if err != nil {
-		joinResponse.Err = err
-		return
-	}
-
-	if joinCmd, ok := command.(*commands.JoinCommand); ok {
-		if err := s.Join(joinCmd.NodeId, joinCmd.Addr); err != nil {
-			joinResponse.Err = err
-		} else {
-			joinResponse.OK = true
-		}
-	} else {
-		joinResponse.Err = fmt.Errorf("unknown command: %v", command)
-	}
+	strResponse = node.ApplyCmd(c)
 }

@@ -40,20 +40,6 @@ func handleWsRequest(upgrader websocket.Upgrader, node *store.Node) http.Handler
 		for {
 			mt, message, err := c.ReadMessage()
 			if err != nil {
-				log.Println("read:", err)
-				break
-			}
-			log.Printf("recv: %s", message)
-			err = c.WriteMessage(mt, message)
-			if err != nil {
-				log.Println("write:", err)
-				break
-			}
-		}
-
-		for {
-			mt, message, err := c.ReadMessage()
-			if err != nil {
 				continue
 			}
 			if mt == websocket.CloseMessage {

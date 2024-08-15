@@ -1,0 +1,41 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "datatypes",
+    srcs = [
+        "bitfield.go",
+        "bitmap.go",
+        "bloom_filter.go",
+        "cuckoo_filter.go",
+        "geospatial.go",
+        "hyperloglog.go",
+        "list.go",
+        "set.go",
+        "sorted_set.go",
+        "string.go",
+        "tdigest.go",
+        "timeseries.go",
+        "type.go",
+    ],
+    importpath = "github.com/c16a/pouch/server/datatypes",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "test",
+    srcs = [
+        "bitfield_test.go",
+        "bitmap_test.go",
+        "bloom_filter_test.go",
+        "cuckoo_filter_test.go",
+        "geospatial_test.go",
+        "hyperloglog_test.go",
+        "list_test.go",
+        "set_test.go",
+        "sorted_set_test.go",
+        "string_test.go",
+        "tdigest_test.go",
+        "timeseries_test.go",
+    ],
+    embed = [":datatypes"],
+)

@@ -1,6 +1,9 @@
 package commands
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 type JoinResponse struct {
 	OK  bool  `json:"ok"`
@@ -14,6 +17,11 @@ func (r JoinResponse) String() string {
 	return fmt.Sprintf("OK %v", r.OK)
 }
 
+var (
+	ErrorInvalidDataType = errors.New("invalid data type")
+	ErrorNotFound        = errors.New("not found")
+)
+
 type ErrorResponse struct {
 	Err error
 }
@@ -23,7 +31,7 @@ func (e *ErrorResponse) String() string {
 }
 
 type CountResponse struct {
-	Count int `json:"COUNT"`
+	Count int
 }
 
 func (c *CountResponse) String() string {
@@ -37,10 +45,33 @@ func (n *NilResponse) String() string {
 	return "NIL"
 }
 
+type BooleanResponse struct {
+	Value bool
+}
+
+func (b *BooleanResponse) String() string {
+	return fmt.Sprintf("BOOLEAN %v", b.Value)
+}
+
 type StringResponse struct {
 	Value string
 }
 
 func (s *StringResponse) String() string {
 	return fmt.Sprintf("STRING %s", s.Value)
+}
+
+type ListResponse struct {
+	Values []string
+}
+
+func (l *ListResponse) String() string {
+	var result string
+	for i, value := range l.Values {
+		if i > 0 {
+			result += "\n"
+		}
+		result += fmt.Sprintf("(%d): %s", i, value)
+	}
+	return result
 }

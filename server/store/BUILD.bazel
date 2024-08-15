@@ -3,7 +3,10 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "store",
     srcs = [
+        "lists.go",
         "node.go",
+        "peer_join.go",
+        "sets.go",
         "snap_shot.go",
         "store.go",
     ],
@@ -11,6 +14,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//sdk/commands",
+        "//server/datatypes",
         "//server/env",
         "@com_github_google_uuid//:uuid",
         "@com_github_hashicorp_raft//:raft",

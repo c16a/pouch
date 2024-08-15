@@ -2,11 +2,12 @@ package store
 
 import (
 	"encoding/json"
+	"github.com/c16a/pouch/server/datatypes"
 	"github.com/hashicorp/raft"
 )
 
 type FsmSnapshot struct {
-	store map[string]string
+	store map[string]datatypes.Type
 }
 
 func (f *FsmSnapshot) Persist(sink raft.SnapshotSink) error {

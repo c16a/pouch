@@ -178,7 +178,7 @@ func (node *Node) Get(cmd *commands.GetCommand) string {
 			return (&commands.ErrorResponse{Err: commands.ErrorInvalidDataType}).String()
 		}
 	} else {
-		return (&commands.NilResponse{}).String()
+		return (&commands.ErrorResponse{Err: commands.ErrorNotFound}).String()
 	}
 }
 

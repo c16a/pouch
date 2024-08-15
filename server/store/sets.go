@@ -41,7 +41,7 @@ func (node *Node) SCard(cmd *commands.SCardCommand) string {
 			return (&commands.ErrorResponse{Err: commands.ErrorInvalidDataType}).String()
 		}
 	} else {
-		return (&commands.NilResponse{}).String()
+		return (&commands.ErrorResponse{Err: commands.ErrorNotFound}).String()
 	}
 }
 
@@ -57,7 +57,7 @@ func (node *Node) SMembers(cmd *commands.SMembersCommand) string {
 			return (&commands.ErrorResponse{Err: commands.ErrorInvalidDataType}).String()
 		}
 	} else {
-		return (&commands.NilResponse{}).String()
+		return (&commands.ErrorResponse{Err: commands.ErrorNotFound}).String()
 	}
 }
 
@@ -75,7 +75,7 @@ func (node *Node) SIsMember(cmd *commands.SIsMemberCommand) string {
 			return (&commands.ErrorResponse{Err: commands.ErrorInvalidDataType}).String()
 		}
 	} else {
-		return (&commands.NilResponse{}).String()
+		return (&commands.ErrorResponse{Err: commands.ErrorNotFound}).String()
 	}
 }
 

@@ -18,7 +18,7 @@ func (node *Node) LLen(cmd *commands.LLenCommand) string {
 			return (&commands.ErrorResponse{Err: commands.ErrorInvalidDataType}).String()
 		}
 	} else {
-		return (&commands.NilResponse{}).String()
+		return (&commands.ErrorResponse{Err: commands.ErrorNotFound}).String()
 	}
 }
 
@@ -39,7 +39,7 @@ func (node *Node) LRange(cmd *commands.LRangeCommand) string {
 			return (&commands.ErrorResponse{Err: commands.ErrorInvalidDataType}).String()
 		}
 	} else {
-		return (&commands.NilResponse{}).String()
+		return (&commands.ErrorResponse{Err: commands.ErrorNotFound}).String()
 	}
 }
 
@@ -115,7 +115,7 @@ func (node *Node) applyLpop(cmd *commands.LPopCommand) interface{} {
 			return (&commands.ErrorResponse{Err: commands.ErrorInvalidDataType}).String()
 		}
 	} else {
-		return (&commands.NilResponse{}).String()
+		return (&commands.ErrorResponse{Err: commands.ErrorNotFound}).String()
 	}
 }
 
@@ -135,6 +135,6 @@ func (node *Node) applyRpop(cmd *commands.RPopCommand) interface{} {
 			return (&commands.ErrorResponse{Err: commands.ErrorInvalidDataType}).String()
 		}
 	} else {
-		return (&commands.NilResponse{}).String()
+		return (&commands.ErrorResponse{Err: commands.ErrorNotFound}).String()
 	}
 }

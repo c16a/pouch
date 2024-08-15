@@ -7,7 +7,7 @@ go_library(
         "common.go",
         "join.go",
         "lists.go",
-        "log.go",
+        "response.go",
         "sets.go",
         "strings.go",
     ],

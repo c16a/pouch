@@ -16,7 +16,7 @@ func main() {
 		enableSingle = true
 	}
 
-	node := store.NewNode()
+	node := store.NewRaftNode()
 	if err := node.Start(enableSingle); err != nil {
 		log.Fatalf("failed to start node: %s", err.Error())
 	}

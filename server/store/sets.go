@@ -5,11 +5,11 @@ import (
 	"github.com/c16a/pouch/server/datatypes"
 )
 
-func (node *Node) SAdd(cmd *commands.SAddCommand) string {
+func (node *RaftNode) SAdd(cmd *commands.SAddCommand) string {
 	return node.respondAfterRaftCommit(cmd)
 }
 
-func (node *Node) applySADD(cmd *commands.SAddCommand) interface{} {
+func (node *RaftNode) applySADD(cmd *commands.SAddCommand) interface{} {
 	node.mu.Lock()
 	defer node.mu.Unlock()
 	if val, ok := node.m[cmd.Key]; ok {
@@ -29,7 +29,7 @@ func (node *Node) applySADD(cmd *commands.SAddCommand) interface{} {
 	}
 }
 
-func (node *Node) SCard(cmd *commands.SCardCommand) string {
+func (node *RaftNode) SCard(cmd *commands.SCardCommand) string {
 	node.mu.Lock()
 	defer node.mu.Unlock()
 	if val, ok := node.m[cmd.Key]; ok {
@@ -45,7 +45,7 @@ func (node *Node) SCard(cmd *commands.SCardCommand) string {
 	}
 }
 
-func (node *Node) SMembers(cmd *commands.SMembersCommand) string {
+func (node *RaftNode) SMembers(cmd *commands.SMembersCommand) string {
 	node.mu.Lock()
 	defer node.mu.Unlock()
 	if val, ok := node.m[cmd.Key]; ok {
@@ -61,7 +61,7 @@ func (node *Node) SMembers(cmd *commands.SMembersCommand) string {
 	}
 }
 
-func (node *Node) SIsMember(cmd *commands.SIsMemberCommand) string {
+func (node *RaftNode) SIsMember(cmd *commands.SIsMemberCommand) string {
 	node.mu.Lock()
 	defer node.mu.Unlock()
 
@@ -79,7 +79,7 @@ func (node *Node) SIsMember(cmd *commands.SIsMemberCommand) string {
 	}
 }
 
-func (node *Node) SUnion(cmd *commands.SUnionCommand) string {
+func (node *RaftNode) SUnion(cmd *commands.SUnionCommand) string {
 	node.mu.Lock()
 	defer node.mu.Unlock()
 
@@ -100,7 +100,7 @@ func (node *Node) SUnion(cmd *commands.SUnionCommand) string {
 	return (&commands.ListResponse{Values: union.GetMembers()}).String()
 }
 
-func (node *Node) SInter(cmd *commands.SInterCommand) string {
+func (node *RaftNode) SInter(cmd *commands.SInterCommand) string {
 	node.mu.Lock()
 	defer node.mu.Unlock()
 
@@ -121,7 +121,7 @@ func (node *Node) SInter(cmd *commands.SInterCommand) string {
 	return (&commands.ListResponse{Values: intersection.GetMembers()}).String()
 }
 
-func (node *Node) SDiff(cmd *commands.SDiffCommand) string {
+func (node *RaftNode) SDiff(cmd *commands.SDiffCommand) string {
 	node.mu.Lock()
 	defer node.mu.Unlock()
 
@@ -142,7 +142,7 @@ func (node *Node) SDiff(cmd *commands.SDiffCommand) string {
 	return (&commands.ListResponse{Values: diff.GetMembers()}).String()
 }
 
-func (node *Node) findSet(key string) (*datatypes.Set[string], error) {
+func (node *RaftNode) findSet(key string) (*datatypes.Set[string], error) {
 	if val, ok := node.m[key]; ok {
 		switch val.GetName() {
 		case "set":

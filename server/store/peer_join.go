@@ -7,7 +7,7 @@ import (
 	"net"
 )
 
-func handlePeerJoin(buf []byte, n int, s *Node, conn *net.UDPConn, addr *net.UDPAddr) {
+func handlePeerJoin(buf []byte, n int, s *RaftNode, conn *net.UDPConn, addr *net.UDPAddr) {
 	joinResponse := &commands.JoinResponse{
 		OK: false,
 	}

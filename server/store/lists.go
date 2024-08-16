@@ -5,7 +5,7 @@ import (
 	"github.com/c16a/pouch/server/datatypes"
 )
 
-func (node *Node) LLen(cmd *commands.LLenCommand) string {
+func (node *RaftNode) LLen(cmd *commands.LLenCommand) string {
 	node.mu.Lock()
 	defer node.mu.Unlock()
 	if val, ok := node.m[cmd.Key]; ok {
@@ -22,7 +22,7 @@ func (node *Node) LLen(cmd *commands.LLenCommand) string {
 	}
 }
 
-func (node *Node) LRange(cmd *commands.LRangeCommand) string {
+func (node *RaftNode) LRange(cmd *commands.LRangeCommand) string {
 	node.mu.Lock()
 	defer node.mu.Unlock()
 	if val, ok := node.m[cmd.Key]; ok {
@@ -43,23 +43,23 @@ func (node *Node) LRange(cmd *commands.LRangeCommand) string {
 	}
 }
 
-func (node *Node) LPush(cmd *commands.LPushCommand) string {
+func (node *RaftNode) LPush(cmd *commands.LPushCommand) string {
 	return node.respondAfterRaftCommit(cmd)
 }
 
-func (node *Node) RPush(cmd *commands.RPushCommand) string {
+func (node *RaftNode) RPush(cmd *commands.RPushCommand) string {
 	return node.respondAfterRaftCommit(cmd)
 }
 
-func (node *Node) RPop(cmd *commands.RPopCommand) string {
+func (node *RaftNode) RPop(cmd *commands.RPopCommand) string {
 	return node.respondAfterRaftCommit(cmd)
 }
 
-func (node *Node) LPop(cmd *commands.LPopCommand) string {
+func (node *RaftNode) LPop(cmd *commands.LPopCommand) string {
 	return node.respondAfterRaftCommit(cmd)
 }
 
-func (node *Node) applyLPush(cmd *commands.LPushCommand) interface{} {
+func (node *RaftNode) applyLPush(cmd *commands.LPushCommand) interface{} {
 	node.mu.Lock()
 	defer node.mu.Unlock()
 	if val, ok := node.m[cmd.Key]; ok {
@@ -79,7 +79,7 @@ func (node *Node) applyLPush(cmd *commands.LPushCommand) interface{} {
 	}
 }
 
-func (node *Node) applyRPush(cmd *commands.RPushCommand) interface{} {
+func (node *RaftNode) applyRPush(cmd *commands.RPushCommand) interface{} {
 	node.mu.Lock()
 	defer node.mu.Unlock()
 	if val, ok := node.m[cmd.Key]; ok {
@@ -99,7 +99,7 @@ func (node *Node) applyRPush(cmd *commands.RPushCommand) interface{} {
 	}
 }
 
-func (node *Node) applyLpop(cmd *commands.LPopCommand) interface{} {
+func (node *RaftNode) applyLpop(cmd *commands.LPopCommand) interface{} {
 	node.mu.Lock()
 	defer node.mu.Unlock()
 	if val, ok := node.m[cmd.Key]; ok {
@@ -119,7 +119,7 @@ func (node *Node) applyLpop(cmd *commands.LPopCommand) interface{} {
 	}
 }
 
-func (node *Node) applyRpop(cmd *commands.RPopCommand) interface{} {
+func (node *RaftNode) applyRpop(cmd *commands.RPopCommand) interface{} {
 	node.mu.Lock()
 	defer node.mu.Unlock()
 	if val, ok := node.m[cmd.Key]; ok {

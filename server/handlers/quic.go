@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-func StartQuicListener(node *store.Node) {
+func StartQuicListener(node *store.RaftNode) {
 	quicAddr := os.Getenv(env.QuicAddr)
 	if quicAddr == "" {
 		log.Fatalf("Environment variable %s not set", env.QuicAddr)
@@ -33,7 +33,7 @@ func StartQuicListener(node *store.Node) {
 	}
 }
 
-func handleQuicConnection(conn quic.Connection, node *store.Node) {
+func handleQuicConnection(conn quic.Connection, node *store.RaftNode) {
 	stream, err := conn.AcceptStream(context.Background())
 	if err != nil {
 		return

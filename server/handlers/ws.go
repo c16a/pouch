@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func StartWsListener(node *store.Node) {
+func StartWsListener(node *store.RaftNode) {
 
 	wsAddr := os.Getenv(env.WsAddr)
 	if wsAddr == "" {
@@ -29,7 +29,7 @@ func StartWsListener(node *store.Node) {
 	}()
 }
 
-func handleWsRequest(upgrader websocket.Upgrader, node *store.Node) http.Handler {
+func handleWsRequest(upgrader websocket.Upgrader, node *store.RaftNode) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {

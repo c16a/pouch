@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-func StartTcpListener(node *store.Node) {
+func StartTcpListener(node *store.RaftNode) {
 	tcpAddr := os.Getenv(env.TcpAddr)
 	if tcpAddr == "" {
 		log.Fatalf("Environment variable %s not set", env.TcpAddr)
@@ -21,7 +21,7 @@ func StartTcpListener(node *store.Node) {
 	startNetListener(node, "tcp", tcpAddr)
 }
 
-func StartUnixListener(node *store.Node) {
+func StartUnixListener(node *store.RaftNode) {
 	unixAddr := os.Getenv(env.UnixAddr)
 	if unixAddr == "" {
 		log.Fatalf("Environment variable %s not set", env.UnixAddr)
@@ -30,7 +30,7 @@ func StartUnixListener(node *store.Node) {
 	startNetListener(node, "unix", unixAddr)
 }
 
-func startNetListener(node *store.Node, protocol string, addr string) {
+func startNetListener(node *store.RaftNode, protocol string, addr string) {
 	listener, err := net.Listen(protocol, addr)
 	if err != nil {
 		log.Fatal(err)
@@ -45,7 +45,7 @@ func startNetListener(node *store.Node, protocol string, addr string) {
 	}
 }
 
-func handleNetConnection(conn net.Conn, node *store.Node) {
+func handleNetConnection(conn net.Conn, node *store.RaftNode) {
 	defer conn.Close()
 
 	reader := bufio.NewReader(conn)

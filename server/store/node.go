@@ -19,8 +19,8 @@ import (
 	"time"
 )
 
-// Node is a simple key-value store, where all changes are made via Raft consensus.
-type Node struct {
+// RaftNode is a simple key-value store, where all changes are made via Raft consensus.
+type RaftNode struct {
 	RaftDir  string
 	RaftBind string
 
@@ -33,8 +33,8 @@ type Node struct {
 	localID string
 }
 
-// NewNode returns a new Node.
-func NewNode() *Node {
+// NewRaftNode returns a new RaftNode.
+func NewRaftNode() *RaftNode {
 	raftPath := os.Getenv(env.RaftDir)
 	if raftPath == "" {
 		log.Fatalf("Environment variable %s is not set\n", env.RaftDir)
@@ -58,7 +58,7 @@ func NewNode() *Node {
 		log.Fatalf("failed to create path for Raft storage: %s", err.Error())
 	}
 
-	return &Node{
+	return &RaftNode{
 		RaftDir:  raftPath,
 		RaftBind: raftAddr,
 		localID:  nodeId,
@@ -70,7 +70,7 @@ func NewNode() *Node {
 // Start opens the store. If enableSingle is set, and there are no existing peers,
 // then this node becomes the first node, and therefore leader, of the cluster.
 // localID should be the server identifier for this node.
-func (node *Node) Start(enableSingle bool) error {
+func (node *RaftNode) Start(enableSingle bool) error {
 	// Setup Raft configuration.
 	config := raft.DefaultConfig()
 	config.LocalID = raft.ServerID(node.localID)
@@ -125,7 +125,7 @@ func (node *Node) Start(enableSingle bool) error {
 	return nil
 }
 
-func (node *Node) ApplyCmd(cmd commands.Command) string {
+func (node *RaftNode) ApplyCmd(cmd commands.Command) string {
 	switch cmd.GetAction() {
 	case commands.Get:
 		return node.Get(cmd.(*commands.GetCommand))
@@ -165,7 +165,7 @@ func (node *Node) ApplyCmd(cmd commands.Command) string {
 }
 
 // Get returns the value for the given key.
-func (node *Node) Get(cmd *commands.GetCommand) string {
+func (node *RaftNode) Get(cmd *commands.GetCommand) string {
 	node.mu.Lock()
 	defer node.mu.Unlock()
 	if val, ok := node.m[cmd.Key]; ok {
@@ -187,7 +187,7 @@ func (node *Node) Get(cmd *commands.GetCommand) string {
 // For followers, it automatically relays the command to the current leader and returns their response.
 //
 // For leaders, it commits to its own Raft log and responds.
-func (node *Node) respondAfterRaftCommit(cmd commands.Command) string {
+func (node *RaftNode) respondAfterRaftCommit(cmd commands.Command) string {
 	if node.raft.State() != raft.Leader {
 		return node.getResponseFromLeader(cmd)
 	}
@@ -203,16 +203,16 @@ func (node *Node) respondAfterRaftCommit(cmd commands.Command) string {
 }
 
 // Set sets the value for the given key.
-func (node *Node) Set(cmd *commands.SetCommand) string {
+func (node *RaftNode) Set(cmd *commands.SetCommand) string {
 	return node.respondAfterRaftCommit(cmd)
 }
 
 // Delete deletes the given key.
-func (node *Node) Delete(cmd *commands.DelCommand) string {
+func (node *RaftNode) Delete(cmd *commands.DelCommand) string {
 	return node.respondAfterRaftCommit(cmd)
 }
 
-func (node *Node) sendToLeaderViaUdp(cmd commands.Command, addr raft.ServerAddress, id raft.ServerID) (string, error) {
+func (node *RaftNode) sendToLeaderViaUdp(cmd commands.Command, addr raft.ServerAddress, id raft.ServerID) (string, error) {
 	udpAddr, err := net.ResolveUDPAddr("udp", string(addr))
 	if err != nil {
 		return "", err
@@ -240,7 +240,7 @@ func (node *Node) sendToLeaderViaUdp(cmd commands.Command, addr raft.ServerAddre
 
 // Join joins a node, identified by nodeID and located at addr, to this store.
 // The node must be ready to respond to Raft communications at that address.
-func (node *Node) Join(nodeID, addr string) error {
+func (node *RaftNode) Join(nodeID, addr string) error {
 	node.logger.Printf("received join request for remote node %s at %s", nodeID, addr)
 
 	configFuture := node.raft.GetConfiguration()
@@ -275,12 +275,12 @@ func (node *Node) Join(nodeID, addr string) error {
 	return nil
 }
 
-type fsm Node
+type fsm RaftNode
 
 // Apply applies a Raft log entry to the key-value store.
 //
 // This command should only process the commands which mutate the key-value store
-func (node *Node) Apply(l *raft.Log) interface{} {
+func (node *RaftNode) Apply(l *raft.Log) interface{} {
 	cmd, err := commands.ParseStringIntoCommand(string(l.Data))
 	if err != nil {
 		return err
@@ -307,7 +307,7 @@ func (node *Node) Apply(l *raft.Log) interface{} {
 }
 
 // Snapshot returns a snapshot of the key-value store.
-func (node *Node) Snapshot() (raft.FSMSnapshot, error) {
+func (node *RaftNode) Snapshot() (raft.FSMSnapshot, error) {
 	node.mu.Lock()
 	defer node.mu.Unlock()
 
@@ -320,7 +320,7 @@ func (node *Node) Snapshot() (raft.FSMSnapshot, error) {
 }
 
 // Restore stores the key-value store to a previous state.
-func (node *Node) Restore(rc io.ReadCloser) error {
+func (node *RaftNode) Restore(rc io.ReadCloser) error {
 	o := make(map[string]datatypes.Type)
 	if err := json.NewDecoder(rc).Decode(&o); err != nil {
 		return err
@@ -332,21 +332,21 @@ func (node *Node) Restore(rc io.ReadCloser) error {
 	return nil
 }
 
-func (node *Node) applySet(cmd *commands.SetCommand) interface{} {
+func (node *RaftNode) applySet(cmd *commands.SetCommand) interface{} {
 	node.mu.Lock()
 	defer node.mu.Unlock()
 	node.m[cmd.Key] = datatypes.NewString(cmd.Value)
 	return (&commands.CountResponse{Count: 1}).String()
 }
 
-func (node *Node) applyDelete(cmd *commands.DelCommand) interface{} {
+func (node *RaftNode) applyDelete(cmd *commands.DelCommand) interface{} {
 	node.mu.Lock()
 	defer node.mu.Unlock()
 	delete(node.m, cmd.Key)
 	return (&commands.CountResponse{Count: 1}).String()
 }
 
-func (node *Node) getResponseFromLeader(cmd commands.Command) string {
+func (node *RaftNode) getResponseFromLeader(cmd commands.Command) string {
 	leaderAddr, id := node.raft.LeaderWithID()
 	response, err := node.sendToLeaderViaUdp(cmd, leaderAddr, id)
 	if err != nil {
@@ -356,7 +356,7 @@ func (node *Node) getResponseFromLeader(cmd commands.Command) string {
 	return response
 }
 
-func (node *Node) initPeer(nodeId string) {
+func (node *RaftNode) initPeer(nodeId string) {
 	peerAddr := os.Getenv(env.PeerAddr)
 	if peerAddr != "" {
 		err := dialPeer(nodeId, peerAddr)
@@ -397,7 +397,7 @@ func dialPeer(nodeId string, peerAddr string) error {
 }
 
 // startPeeringServer will start a peering server and keep it open
-func (node *Node) startPeeringServer() error {
+func (node *RaftNode) startPeeringServer() error {
 	peeringPort := os.Getenv(env.RaftAddr)
 	if peeringPort == "" {
 		return fmt.Errorf("environment variable %s not set", env.RaftAddr)
@@ -417,7 +417,7 @@ func (node *Node) startPeeringServer() error {
 	return nil
 }
 
-func handlePeerMessage(conn *net.UDPConn, s *Node) {
+func handlePeerMessage(conn *net.UDPConn, s *RaftNode) {
 	for {
 		buf := make([]byte, 1024)
 		n, addr, err := conn.ReadFromUDP(buf)
@@ -439,7 +439,7 @@ func handlePeerMessage(conn *net.UDPConn, s *Node) {
 	}
 }
 
-func handlePeerLog(buf []byte, n int, node *Node, conn *net.UDPConn, addr *net.UDPAddr) {
+func handlePeerLog(buf []byte, n int, node *RaftNode, conn *net.UDPConn, addr *net.UDPAddr) {
 	var strResponse string
 
 	defer func() {

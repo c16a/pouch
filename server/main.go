@@ -20,8 +20,10 @@ func main() {
 	if err := node.Start(enableSingle); err != nil {
 		log.Fatalf("failed to start node: %s", err.Error())
 	}
+
 	go handlers.StartTcpListener(node)
 	go handlers.StartWsListener(node)
+	go handlers.StartQuicListener(node)
 
 	terminate := make(chan os.Signal, 1)
 	signal.Notify(terminate, os.Interrupt, os.Kill)

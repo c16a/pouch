@@ -2,42 +2,45 @@ package handlers
 
 import (
 	"bufio"
+	"context"
 	"github.com/c16a/pouch/sdk/commands"
 	"github.com/c16a/pouch/server/env"
 	"github.com/c16a/pouch/server/store"
+	"github.com/quic-go/quic-go"
 	"io"
 	"log"
-	"net"
 	"os"
 	"strings"
 )
 
-func StartTcpListener(node *store.Node) {
-	tcpAddr := os.Getenv(env.TcpAddr)
-	if tcpAddr == "" {
-		log.Fatalf("Environment variable %s not set", env.TcpAddr)
+func StartQuicListener(node *store.Node) {
+	quicAddr := os.Getenv(env.QuicAddr)
+	if quicAddr == "" {
+		log.Fatalf("Environment variable %s not set", env.QuicAddr)
 	}
 
-	listener, err := net.Listen("tcp", tcpAddr)
+	listener, err := quic.ListenAddr(quicAddr, nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	for {
-		conn, err := listener.Accept()
+		conn, err := listener.Accept(context.Background())
 		if err != nil {
 			continue
 		}
-		go handleTcpConnection(conn, node)
+		go handleQuicConnection(conn, node)
 	}
-
 }
 
-func handleTcpConnection(conn net.Conn, node *store.Node) {
-	defer conn.Close()
+func handleQuicConnection(conn quic.Connection, node *store.Node) {
+	stream, err := conn.AcceptStream(context.Background())
+	if err != nil {
+		return
+	}
 
-	reader := bufio.NewReader(conn)
-	writer := bufio.NewWriter(conn)
+	reader := bufio.NewReader(stream)
+	writer := bufio.NewWriter(stream)
 
 	for {
 		line, err := reader.ReadString('\n')

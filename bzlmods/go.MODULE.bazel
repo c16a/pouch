@@ -9,4 +9,5 @@ use_repo(
     "com_github_hashicorp_raft_boltdb_v2",
     "com_github_google_uuid",
     "com_github_gorilla_websocket",
+    "com_github_quic_go_quic_go",
 )

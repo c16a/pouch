@@ -3,7 +3,8 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "handlers",
     srcs = [
-        "tcp.go",
+        "net.go",
+        "quic.go",
         "ws.go",
     ],
     importpath = "github.com/c16a/pouch/server/handlers",
@@ -13,5 +14,6 @@ go_library(
         "//server/env",
         "//server/store",
         "@com_github_gorilla_websocket//:websocket",
+        "@com_github_quic_go_quic_go//:quic-go",
     ],
 )

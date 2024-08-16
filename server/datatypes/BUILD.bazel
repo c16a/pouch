@@ -39,3 +39,22 @@ go_test(
     ],
     embed = [":datatypes"],
 )
+
+go_test(
+    name = "datatypes_test",
+    srcs = [
+        "bitfield_test.go",
+        "bitmap_test.go",
+        "bloom_filter_test.go",
+        "cuckoo_filter_test.go",
+        "geospatial_test.go",
+        "hyperloglog_test.go",
+        "list_test.go",
+        "set_test.go",
+        "sorted_set_test.go",
+        "string_test.go",
+        "tdigest_test.go",
+        "timeseries_test.go",
+    ],
+    embed = [":datatypes"],
+)

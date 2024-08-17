@@ -64,7 +64,7 @@ oci_image_index(
     images = [
         ":image_app_linux_amd64",
         ":image_app_linux_arm64",
-        #        ":image_app_linux_riscv64",
+        ":image_app_linux_riscv64",
         ":image_app_linux_s390x",
         ":image_app_linux_ppc64le",
     ],

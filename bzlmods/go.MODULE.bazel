@@ -6,7 +6,8 @@ go_deps.from_file(go_mod = "//:go.mod")
 use_repo(
     go_deps,
     "com_github_hashicorp_raft",
-    "com_github_hashicorp_raft_boltdb_v2",
+    "com_github_hashicorp_go_msgpack_v2",
+    "io_etcd_go_bbolt",
     "com_github_google_uuid",
     "com_github_gorilla_websocket",
     "com_github_quic_go_quic_go",

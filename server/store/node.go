@@ -9,7 +9,6 @@ import (
 	"github.com/c16a/pouch/server/env"
 	"github.com/google/uuid"
 	"github.com/hashicorp/raft"
-	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
 	"io"
 	"log"
 	"net"
@@ -92,9 +91,7 @@ func (node *RaftNode) Start(enableSingle bool) error {
 	}
 
 	// Create the log store and stable store.
-	boltDB, err := raftboltdb.New(raftboltdb.Options{
-		Path: filepath.Join(node.RaftDir, "raft.db"),
-	})
+	boltDB, err := NewBoltStore(filepath.Join(node.RaftDir, "raft.db"))
 	if err != nil {
 		return fmt.Errorf("new bbolt store: %s", err)
 	}

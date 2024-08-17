@@ -38,12 +38,12 @@ multi_arch_go_image(
             "pure": "on",
             "static": "on",
         },
-        #        {
-        #            "goos": "linux",
-        #            "goarch": "riscv64",
-        #            "pure": "on",
-        #            "static": "on",
-        #        },
+        {
+            "goos": "linux",
+            "goarch": "riscv64",
+            "pure": "on",
+            "static": "on",
+        },
         {
             "goos": "linux",
             "goarch": "s390x",

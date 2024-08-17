@@ -3,12 +3,14 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "store",
     srcs = [
+        "bbolt.go",
         "lists.go",
         "node.go",
         "peer_join.go",
         "sets.go",
         "snap_shot.go",
         "store.go",
+        "utils.go",
     ],
     importpath = "github.com/c16a/pouch/server/store",
     visibility = ["//visibility:public"],
@@ -17,7 +19,8 @@ go_library(
         "//server/datatypes",
         "//server/env",
         "@com_github_google_uuid//:uuid",
+        "@com_github_hashicorp_go_msgpack_v2//codec",
         "@com_github_hashicorp_raft//:raft",
-        "@com_github_hashicorp_raft_boltdb_v2//:raft-boltdb",
+        "@io_etcd_go_bbolt//:bbolt",
     ],
 )

@@ -23,7 +23,7 @@ func main() {
 
 	go handlers.StartTcpListener(node)
 	go handlers.StartWsListener(node)
-	go handlers.StartQuicListener(node)
+	//go handlers.StartQuicListener(node)
 
 	terminate := make(chan os.Signal, 1)
 	signal.Notify(terminate, os.Interrupt, os.Kill)

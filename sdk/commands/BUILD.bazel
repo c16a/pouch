@@ -3,14 +3,9 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "commands",
     srcs = [
-        "auth.go",
+        "client.go",
         "command.go",
-        "common.go",
-        "join.go",
-        "lists.go",
-        "response.go",
-        "sets.go",
-        "strings.go",
+        "server.go",
     ],
     importpath = "github.com/c16a/pouch/sdk/commands",
     visibility = ["//visibility:public"],

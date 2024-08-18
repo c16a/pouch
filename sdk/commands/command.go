@@ -2,47 +2,44 @@ package commands
 
 import (
 	"errors"
-	"strconv"
 	"strings"
 )
 
-type CommandKind string
-
-// CommandAction is a request from client
-type CommandAction string
+// MessageType is a request from client
+type MessageType string
 
 const (
-	Join CommandAction = "JOIN"
-	Get  CommandAction = "GET"
-	Set  CommandAction = "SET"
-	Del  CommandAction = "DEL"
+	Join MessageType = "JOIN"
+	Get  MessageType = "GET"
+	Set  MessageType = "SET"
+	Del  MessageType = "DEL"
 
-	LPush  CommandAction = "LPUSH"
-	RPush  CommandAction = "RPUSH"
-	LPop   CommandAction = "LPOP"
-	RPop   CommandAction = "RPOP"
-	LRange CommandAction = "LRANGE"
-	LLen   CommandAction = "LLEN"
+	LPush  MessageType = "LPUSH"
+	RPush  MessageType = "RPUSH"
+	LPop   MessageType = "LPOP"
+	RPop   MessageType = "RPOP"
+	LRange MessageType = "LRANGE"
+	LLen   MessageType = "LLEN"
 
-	SAdd      CommandAction = "SADD"
-	SCard     CommandAction = "SCARD"
-	SDiff     CommandAction = "SDIFF"
-	SInter    CommandAction = "SINTER"
-	SIsMember CommandAction = "SISMEMBER"
-	SMembers  CommandAction = "SMEMBERS"
-	SUnion    CommandAction = "SUNION"
+	SAdd      MessageType = "SADD"
+	SCard     MessageType = "SCARD"
+	SDiff     MessageType = "SDIFF"
+	SInter    MessageType = "SINTER"
+	SIsMember MessageType = "SISMEMBER"
+	SMembers  MessageType = "SMEMBERS"
+	SUnion    MessageType = "SUNION"
 
-	AuthChallengeResponse CommandAction = "AUTH.CHALLENGE.RES"
-	AuthChallengeRequest  CommandAction = "AUTH.CHALLENGE.REQ"
+	AuthChallengeResponse MessageType = "AUTH.CHALLENGE.RES"
+	AuthChallengeRequest  MessageType = "AUTH.CHALLENGE.REQ"
 
-	Err     CommandAction = "ERR"
-	Count   CommandAction = "COUNT"
-	String  CommandAction = "STRING"
-	Boolean CommandAction = "BOOLEAN"
+	Err     MessageType = "ERR"
+	Count   MessageType = "COUNT"
+	String  MessageType = "STRING"
+	Boolean MessageType = "BOOLEAN"
 )
 
 type Command interface {
-	GetAction() CommandAction
+	GetAction() MessageType
 	String() string
 }
 
@@ -55,86 +52,48 @@ func ParseStringIntoCommand(s string) (Command, error) {
 
 	action := parts[0]
 
+	lineMessage := LineMessage{Line: s, MessageType: MessageType(action)}
+
 	switch action {
 	// This is a special action for joining clusters
 	case string(Join):
 		return &JoinCommand{NodeId: parts[1], Addr: parts[2]}, nil
 	case string(AuthChallengeResponse):
-		return &AuthChallengeResponseCommand{ClientId: parts[1], ChallengeSignature: parts[2], line: s}, nil
+		return NewAuthChallengeResponseCommand(lineMessage)
 	case string(AuthChallengeRequest):
-		return &AuthChallengeRequestCommand{Challenge: parts[1], line: s}, nil
+		return NewAuthChallengeRequestCommand(lineMessage)
 	case string(Get):
-		return &GetCommand{Key: parts[1], line: s}, nil
+		return NewGetCommand(lineMessage)
 	case string(Set):
-		return &SetCommand{Key: parts[1], Value: parts[2], line: s}, nil
+		return NewSetCommand(lineMessage)
 	case string(Del):
-		return &DelCommand{Key: parts[1], line: s}, nil
+		return NewDelCommand(lineMessage)
 	case string(LPush):
-		return &LPushCommand{Key: parts[1], Values: parts[2:], line: s}, nil
+		return NewLPushCommand(lineMessage)
 	case string(RPush):
-		return &RPushCommand{Key: parts[1], Values: parts[2:], line: s}, nil
+		return NewRPushCommand(lineMessage)
 	case string(LLen):
-		return &LLenCommand{Key: parts[1], line: s}, nil
+		return NewLLenCommand(lineMessage)
 	case string(LPop):
-		var err error
-		key := parts[1]
-
-		count := 1
-		if len(parts) == 3 {
-			count, err = strconv.Atoi(parts[2])
-			if err != nil {
-				return nil, errors.New("invalid count")
-			}
-		}
-		return &LPopCommand{Key: key, Count: count, line: s}, nil
+		return NewLPopCommand(lineMessage)
 	case string(RPop):
-		var err error
-		key := parts[1]
-
-		count := 1
-		if len(parts) == 3 {
-			count, err = strconv.Atoi(parts[2])
-			if err != nil {
-				return nil, errors.New("invalid count")
-			}
-		}
-
-		return &RPopCommand{Key: key, Count: count, line: s}, nil
+		return NewRPopCommand(lineMessage)
 	case string(LRange):
-		var err error
-
-		key := parts[1]
-
-		startIdx := 0
-		if len(parts) == 3 {
-			startIdx, err = strconv.Atoi(parts[2])
-			if err != nil {
-				return nil, errors.New("invalid start index")
-			}
-		}
-
-		endIdx := -1
-		if len(parts) == 4 {
-			endIdx, err = strconv.Atoi(parts[3])
-			if err != nil {
-				return nil, errors.New("invalid end index")
-			}
-		}
-		return &LRangeCommand{Key: key, Start: startIdx, End: endIdx, line: s}, nil
+		return NewLRangeCommand(lineMessage)
 	case string(SAdd):
-		return &SAddCommand{Key: parts[1], Values: parts[2:], line: s}, nil
+		return NewSAddCommand(lineMessage)
 	case string(SCard):
-		return &SCardCommand{Key: parts[1], line: s}, nil
+		return NewSCardCommand(lineMessage)
 	case string(SDiff):
-		return &SDiffCommand{Key: parts[1], OtherKeys: parts[2:], line: s}, nil
+		return NewSDiffCommand(lineMessage)
 	case string(SInter):
-		return &SInterCommand{Key: parts[1], OtherKeys: parts[2:], line: s}, nil
+		return NewSInterCommand(lineMessage)
 	case string(SUnion):
-		return &SUnionCommand{Key: parts[1], OtherKeys: parts[2:], line: s}, nil
+		return NewSUnionCommand(lineMessage)
 	case string(SIsMember):
-		return &SIsMemberCommand{Key: parts[1], Value: parts[2], line: s}, nil
+		return NewSIsMemberCommand(lineMessage)
 	case string(SMembers):
-		return &SMembersCommand{Key: parts[1], line: s}, nil
+		return NewSMembersCommand(lineMessage)
 	default:
 		return nil, errors.New("invalid command")
 	}

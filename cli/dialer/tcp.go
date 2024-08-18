@@ -42,8 +42,6 @@ func handleTcpLoop(conn net.Conn, clientId string, encodedSeed string) {
 	if msg.GetAction() == commands.AuthChallengeRequest {
 		authCmd := msg.(*commands.AuthChallengeRequestCommand)
 
-		fmt.Println("Received authentication challenge")
-
 		challenge := authCmd.Challenge
 		signature, err := pouchkey.SignWithSeedAsHex(encodedSeed, challenge)
 		if err != nil {
@@ -51,9 +49,11 @@ func handleTcpLoop(conn net.Conn, clientId string, encodedSeed string) {
 			return
 		}
 
-		fmt.Println("Generated signature")
-
-		authChallengeResponse := &commands.AuthChallengeResponseCommand{ClientId: clientId, ChallengeSignature: signature}
+		authChallengeResponse, err := commands.NewAuthChallengeResponseCommandWithValues(clientId, signature)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 		writer.WriteString(authChallengeResponse.String() + "\n")
 		writer.Flush()
 	} else {

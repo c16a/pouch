@@ -77,7 +77,7 @@ func NewAuthChallengeRequestCommand(line LineMessage) (*AuthChallengeRequestComm
 	}, nil
 }
 
-func (a *AuthChallengeRequestCommand) GetAction() MessageType {
+func (a *AuthChallengeRequestCommand) GetMessageType() MessageType {
 	return AuthChallengeRequest
 }
 
@@ -103,7 +103,7 @@ func NewJoinCommand(line LineMessage) (*JoinCommand, error) {
 	}, nil
 }
 
-func (c *JoinCommand) GetAction() MessageType {
+func (c *JoinCommand) GetMessageType() MessageType {
 	return Join
 }
 

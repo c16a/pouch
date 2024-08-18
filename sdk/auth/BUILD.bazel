@@ -1,0 +1,16 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "auth",
+    srcs = [
+        "auth.go",
+        "challenge.go",
+    ],
+    importpath = "github.com/c16a/pouch/sdk/auth",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//sdk/commands",
+        "//sdk/pouchkey",
+        "//server/store",
+    ],
+)

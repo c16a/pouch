@@ -123,7 +123,7 @@ func (node *RaftNode) Start() error {
 }
 
 func (node *RaftNode) ApplyCmd(cmd commands.Command) string {
-	switch cmd.GetAction() {
+	switch cmd.GetMessageType() {
 	case commands.Get:
 		return node.Get(cmd.(*commands.GetCommand))
 	case commands.Set:
@@ -283,7 +283,7 @@ func (node *RaftNode) Apply(l *raft.Log) interface{} {
 		return err
 	}
 
-	switch cmd.GetAction() {
+	switch cmd.GetMessageType() {
 	case commands.Set:
 		return node.applySet(cmd.(*commands.SetCommand))
 	case commands.Del:
@@ -299,7 +299,7 @@ func (node *RaftNode) Apply(l *raft.Log) interface{} {
 	case commands.SAdd:
 		return node.applySADD(cmd.(*commands.SAddCommand))
 	default:
-		panic(fmt.Sprintf("unrecognized command op: %s", cmd.GetAction()))
+		panic(fmt.Sprintf("unrecognized command op: %s", cmd.GetMessageType()))
 	}
 }
 
@@ -433,7 +433,7 @@ func handlePeerMessage(conn *net.UDPConn, s *RaftNode) {
 			continue
 		}
 
-		switch cmd.GetAction() {
+		switch cmd.GetMessageType() {
 		case commands.Join:
 			handlePeerJoin(buf, n, s, conn, addr)
 		default:

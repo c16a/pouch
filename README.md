@@ -7,14 +7,14 @@ A really tiny KV store.
 The repository build system outputs binaries for both the server and the CLI. Additionally, OCI containers are also
 build for multiple architectures.
 
+```shell
+bazelisk build //...
+```
+
 ## Running tests
 
 All tests can be run from the repository root.
 
 ```shell
 bazelisk test //...
-```
-
-```shell
-bazelisk build //...
 ```

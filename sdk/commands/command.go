@@ -38,7 +38,7 @@ const (
 )
 
 type Command interface {
-	GetAction() MessageType
+	GetMessageType() MessageType
 	String() string
 }
 
@@ -54,9 +54,8 @@ func ParseStringIntoCommand(s string) (Command, error) {
 	lineMessage := LineMessage{Line: s, MessageType: MessageType(action)}
 
 	switch action {
-	// This is a special action for joining clusters
 	case string(Join):
-		return &JoinCommand{NodeId: parts[1], Addr: parts[2]}, nil
+		return NewJoinCommand(lineMessage)
 	case string(AuthChallengeResponse):
 		return NewAuthChallengeResponseCommand(lineMessage)
 	case string(AuthChallengeRequest):

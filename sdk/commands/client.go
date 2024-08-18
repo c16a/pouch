@@ -16,7 +16,7 @@ func (l *LineMessage) String() string {
 	return l.Line
 }
 
-func (l *LineMessage) GetAction() MessageType {
+func (l *LineMessage) GetMessageType() MessageType {
 	return l.MessageType
 }
 

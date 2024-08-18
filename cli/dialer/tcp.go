@@ -39,7 +39,7 @@ func handleTcpLoop(conn net.Conn, clientId string, encodedSeed string) {
 		return
 	}
 
-	if msg.GetAction() == commands.AuthChallengeRequest {
+	if msg.GetMessageType() == commands.AuthChallengeRequest {
 		authCmd := msg.(*commands.AuthChallengeRequestCommand)
 
 		challenge := authCmd.Challenge

@@ -10,6 +10,7 @@ go_library(
     importpath = "github.com/c16a/pouch/server/handlers",
     visibility = ["//visibility:public"],
     deps = [
+        "//sdk/auth",
         "//sdk/commands",
         "//sdk/pouchkey",
         "//server/env",

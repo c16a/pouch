@@ -1,7 +1,9 @@
 package auth
 
-import "net"
+import (
+	"bufio"
+)
 
 type Authenticator interface {
-	Authenticate(conn net.Conn) error
+	Authenticate(reader *bufio.Reader, writer *bufio.Writer) error
 }

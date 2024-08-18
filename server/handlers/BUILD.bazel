@@ -12,7 +12,6 @@ go_library(
     deps = [
         "//sdk/auth",
         "//sdk/commands",
-        "//sdk/pouchkey",
         "//server/env",
         "//server/store",
         "@com_github_gorilla_websocket//:websocket",

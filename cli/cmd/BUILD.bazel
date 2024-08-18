@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "cmd",
+    srcs = [
+        "connect.go",
+        "genkeypair.go",
+        "genseed.go",
+        "root.go",
+    ],
+    importpath = "github.com/c16a/pouch/cli/cmd",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cli/dialer",
+        "//sdk/pouchkey",
+        "@com_github_spf13_cobra//:cobra",
+    ],
+)

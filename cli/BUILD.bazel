@@ -1,0 +1,55 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+load("//rules:go.bzl", "multi_arch_go_binary")
+
+go_library(
+    name = "lib",
+    srcs = ["main.go"],
+    importpath = "github.com/c16a/pouch/cli",
+    visibility = ["//visibility:private"],
+    deps = ["//cli/cmd"],
+)
+
+go_binary(
+    name = "bin",
+    embed = [":lib"],
+    visibility = ["//visibility:public"],
+)
+
+multi_arch_go_binary(
+    name = "app",
+    embed = [
+        ":lib",
+    ],
+    targets = [
+        {
+            "goos": "linux",
+            "goarch": "amd64",
+            "pure": "on",
+            "static": "on",
+        },
+        {
+            "goos": "linux",
+            "goarch": "arm64",
+            "pure": "on",
+            "static": "on",
+        },
+        {
+            "goos": "linux",
+            "goarch": "riscv64",
+            "pure": "on",
+            "static": "on",
+        },
+        {
+            "goos": "linux",
+            "goarch": "s390x",
+            "pure": "on",
+            "static": "on",
+        },
+        {
+            "goos": "linux",
+            "goarch": "ppc64le",
+            "pure": "on",
+            "static": "on",
+        },
+    ],
+)

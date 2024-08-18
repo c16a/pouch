@@ -4,6 +4,7 @@ go_library(
     name = "store",
     srcs = [
         "bbolt.go",
+        "config.go",
         "lists.go",
         "node.go",
         "peer_join.go",
@@ -17,7 +18,6 @@ go_library(
     deps = [
         "//sdk/commands",
         "//server/datatypes",
-        "//server/env",
         "@com_github_google_uuid//:uuid",
         "@com_github_hashicorp_go_msgpack_v2//codec",
         "@com_github_hashicorp_raft//:raft",

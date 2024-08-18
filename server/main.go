@@ -1,23 +1,29 @@
 package main
 
 import (
+	"encoding/json"
 	"github.com/c16a/pouch/server/env"
 	"github.com/c16a/pouch/server/handlers"
 	"github.com/c16a/pouch/server/store"
+	"io"
 	"log"
 	"os"
 	"os/signal"
 )
 
 func main() {
-	peerAddr := os.Getenv(env.PeerAddr)
-	enableSingle := false
-	if peerAddr == "" {
-		enableSingle = true
+	configPath := os.Getenv(env.ConfigFilePath)
+	if configPath == "" {
+		panic("config file path is empty")
 	}
 
-	node := store.NewRaftNode()
-	if err := node.Start(enableSingle); err != nil {
+	config, err := scanConfigFile[store.NodeConfig](configPath)
+	if err != nil {
+		panic(err)
+	}
+
+	node := store.NewRaftNode(config)
+	if err := node.Start(); err != nil {
 		log.Fatalf("failed to start node: %s", err.Error())
 	}
 
@@ -29,4 +35,24 @@ func main() {
 	signal.Notify(terminate, os.Interrupt, os.Kill)
 	<-terminate
 	log.Println("pouch exiting")
+}
+
+func scanConfigFile[T any](path string) (*T, error) {
+	configFile, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	fileBytes, err := io.ReadAll(configFile)
+	if err != nil {
+		return nil, err
+	}
+
+	var t T
+	err = json.Unmarshal(fileBytes, &t)
+	if err != nil {
+		return nil, err
+	}
+
+	return &t, nil
 }

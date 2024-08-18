@@ -31,6 +31,14 @@ const (
 	SIsMember CommandAction = "SISMEMBER"
 	SMembers  CommandAction = "SMEMBERS"
 	SUnion    CommandAction = "SUNION"
+
+	AuthChallengeResponse CommandAction = "AUTH.CHALLENGE.RES"
+	AuthChallengeRequest  CommandAction = "AUTH.CHALLENGE.REQ"
+
+	Err     CommandAction = "ERR"
+	Count   CommandAction = "COUNT"
+	String  CommandAction = "STRING"
+	Boolean CommandAction = "BOOLEAN"
 )
 
 type Command interface {
@@ -42,7 +50,7 @@ func ParseStringIntoCommand(s string) (Command, error) {
 	parts := strings.Split(s, " ")
 
 	if len(parts) == 0 {
-		return nil, errors.New("invalid command")
+		return nil, errors.New("empty command")
 	}
 
 	action := parts[0]
@@ -51,7 +59,10 @@ func ParseStringIntoCommand(s string) (Command, error) {
 	// This is a special action for joining clusters
 	case string(Join):
 		return &JoinCommand{NodeId: parts[1], Addr: parts[2]}, nil
-
+	case string(AuthChallengeResponse):
+		return &AuthChallengeResponseCommand{ClientId: parts[1], ChallengeSignature: parts[2], line: s}, nil
+	case string(AuthChallengeRequest):
+		return &AuthChallengeRequestCommand{Challenge: parts[1], line: s}, nil
 	case string(Get):
 		return &GetCommand{Key: parts[1], line: s}, nil
 	case string(Set):

@@ -1,0 +1,12 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "dialer",
+    srcs = ["tcp.go"],
+    importpath = "github.com/c16a/pouch/cli/dialer",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//sdk/commands",
+        "//sdk/pouchkey",
+    ],
+)

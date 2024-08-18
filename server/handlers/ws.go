@@ -2,27 +2,19 @@ package handlers
 
 import (
 	"github.com/c16a/pouch/sdk/commands"
-	"github.com/c16a/pouch/server/env"
 	"github.com/c16a/pouch/server/store"
 	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 )
 
 func StartWsListener(node *store.RaftNode) {
-
-	wsAddr := os.Getenv(env.WsAddr)
-	if wsAddr == "" {
-		log.Fatalf("Environment variable %s not set", env.WsAddr)
-	}
-
 	var upgrader = websocket.Upgrader{}
 	http.Handle("/", handleWsRequest(upgrader, node))
 
 	go func() {
-		err := http.ListenAndServe(wsAddr, http.DefaultServeMux)
+		err := http.ListenAndServe(node.Config.Ws.Addr, http.DefaultServeMux)
 		if err != nil {
 			log.Fatal(err)
 		}

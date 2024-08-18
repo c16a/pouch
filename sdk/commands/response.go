@@ -27,7 +27,7 @@ type ErrorResponse struct {
 }
 
 func (e *ErrorResponse) String() string {
-	return fmt.Sprintf("ERR %s", e.Err.Error())
+	return fmt.Sprintf("%s %s", Count, e.Err.Error())
 }
 
 type CountResponse struct {
@@ -35,14 +35,7 @@ type CountResponse struct {
 }
 
 func (c *CountResponse) String() string {
-	return fmt.Sprintf("COUNT %d", c.Count)
-}
-
-type NilResponse struct {
-}
-
-func (n *NilResponse) String() string {
-	return "NIL"
+	return fmt.Sprintf("%s %d", Count, c.Count)
 }
 
 type BooleanResponse struct {
@@ -50,7 +43,7 @@ type BooleanResponse struct {
 }
 
 func (b *BooleanResponse) String() string {
-	return fmt.Sprintf("BOOLEAN %v", b.Value)
+	return fmt.Sprintf("%s %v", Boolean, b.Value)
 }
 
 type StringResponse struct {
@@ -58,7 +51,7 @@ type StringResponse struct {
 }
 
 func (s *StringResponse) String() string {
-	return fmt.Sprintf("STRING %s", s.Value)
+	return fmt.Sprintf("%s %s", String, s.Value)
 }
 
 type ListResponse struct {

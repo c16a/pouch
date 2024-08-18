@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/c16a/pouch/sdk/commands"
 	"github.com/c16a/pouch/server/datatypes"
-	"github.com/c16a/pouch/server/env"
 	"github.com/google/uuid"
 	"github.com/hashicorp/raft"
 	"io"
@@ -28,29 +27,29 @@ type RaftNode struct {
 
 	raft *raft.Raft // The consensus mechanism
 
-	logger  *log.Logger
-	localID string
+	logger *log.Logger
+	Config *NodeConfig
 }
 
 // NewRaftNode returns a new RaftNode.
-func NewRaftNode() *RaftNode {
-	raftPath := os.Getenv(env.RaftDir)
+func NewRaftNode(config *NodeConfig) *RaftNode {
+	raftPath := config.Cluster.RaftDir
 	if raftPath == "" {
-		log.Fatalf("Environment variable %s is not set\n", env.RaftDir)
+		log.Fatalf("No raft dir specified")
 	}
 
-	raftAddr := os.Getenv(env.RaftAddr)
+	raftAddr := config.Cluster.Addr
 	if raftAddr == "" {
-		log.Fatalf("Environment variable %s is not set\n", env.RaftAddr)
+		log.Fatalf("No raft addr specified")
 	}
 
-	nodeId := os.Getenv(env.NodeId)
+	nodeId := config.Cluster.NodeID
 	if nodeId == "" {
 		id, err := uuid.NewV7()
 		if err != nil {
 			log.Fatalf("failed to generate node id: %s", err.Error())
 		}
-		nodeId = id.String()
+		config.Cluster.NodeID = id.String()
 	}
 
 	if err := os.MkdirAll(raftPath, 0700); err != nil {
@@ -60,19 +59,19 @@ func NewRaftNode() *RaftNode {
 	return &RaftNode{
 		RaftDir:  raftPath,
 		RaftBind: raftAddr,
-		localID:  nodeId,
 		m:        make(map[string]datatypes.Type),
 		logger:   log.New(os.Stderr, "[store] ", log.LstdFlags),
+		Config:   config,
 	}
 }
 
 // Start opens the store. If enableSingle is set, and there are no existing peers,
 // then this node becomes the first node, and therefore leader, of the cluster.
 // localID should be the server identifier for this node.
-func (node *RaftNode) Start(enableSingle bool) error {
+func (node *RaftNode) Start() error {
 	// Setup Raft configuration.
 	config := raft.DefaultConfig()
-	config.LocalID = raft.ServerID(node.localID)
+	config.LocalID = raft.ServerID(node.Config.Cluster.NodeID)
 
 	// Setup Raft communication.
 	addr, err := net.ResolveTCPAddr("tcp", node.RaftBind)
@@ -105,7 +104,8 @@ func (node *RaftNode) Start(enableSingle bool) error {
 	}
 	node.raft = ra
 
-	if enableSingle {
+	peers := node.Config.Cluster.PeerAddrs
+	if peers == nil || len(peers) == 0 {
 		configuration := raft.Configuration{
 			Servers: []raft.Server{
 				{
@@ -117,7 +117,7 @@ func (node *RaftNode) Start(enableSingle bool) error {
 		ra.BootstrapCluster(configuration)
 	}
 
-	node.initPeer(node.localID)
+	node.initPeer()
 
 	return nil
 }
@@ -169,7 +169,7 @@ func (node *RaftNode) Get(cmd *commands.GetCommand) string {
 		switch {
 		case val.GetName() == "string":
 			strVal := val.(*datatypes.String)
-			response := &commands.StringResponse{Value: strVal.GetName()}
+			response := &commands.StringResponse{Value: strVal.GetValue()}
 			return response.String()
 		default:
 			return (&commands.ErrorResponse{Err: commands.ErrorInvalidDataType}).String()
@@ -353,12 +353,16 @@ func (node *RaftNode) getResponseFromLeader(cmd commands.Command) string {
 	return response
 }
 
-func (node *RaftNode) initPeer(nodeId string) {
-	peerAddr := os.Getenv(env.PeerAddr)
-	if peerAddr != "" {
-		err := dialPeer(nodeId, peerAddr)
-		if err != nil {
-			fmt.Println("Failed to dial peer:", err)
+func (node *RaftNode) initPeer() {
+	peers := node.Config.Cluster.PeerAddrs
+
+	if peers != nil && len(peers) > 0 {
+		peerAddr := peers[0]
+		if peerAddr != "" {
+			err := node.dialPeer(peerAddr)
+			if err != nil {
+				fmt.Println("Failed to dial peer:", err)
+			}
 		}
 	}
 
@@ -366,7 +370,7 @@ func (node *RaftNode) initPeer(nodeId string) {
 	go node.startPeeringServer()
 }
 
-func dialPeer(nodeId string, peerAddr string) error {
+func (node *RaftNode) dialPeer(peerAddr string) error {
 	udpAddr, err := net.ResolveUDPAddr("udp", peerAddr)
 	if err != nil {
 		return err
@@ -379,12 +383,11 @@ func dialPeer(nodeId string, peerAddr string) error {
 
 	defer conn.Close()
 
-	raftAddr := os.Getenv(env.RaftAddr)
-	if raftAddr == "" {
+	if node.Config.Cluster.Addr == "" {
 		return errors.New("no raft address")
 	}
 
-	joinRequest := commands.NewJoinCommand(nodeId, raftAddr)
+	joinRequest := commands.NewJoinCommand(node.Config.Cluster.NodeID, node.Config.Cluster.Addr)
 	_, err = conn.Write([]byte(joinRequest))
 	if err != nil {
 		return err
@@ -395,9 +398,9 @@ func dialPeer(nodeId string, peerAddr string) error {
 
 // startPeeringServer will start a peering server and keep it open
 func (node *RaftNode) startPeeringServer() error {
-	peeringPort := os.Getenv(env.RaftAddr)
+	peeringPort := node.Config.Cluster.Addr
 	if peeringPort == "" {
-		return fmt.Errorf("environment variable %s not set", env.RaftAddr)
+		log.Fatalf("Raft addr not specified")
 	}
 
 	udpAddr, err := net.ResolveUDPAddr("udp", peeringPort)

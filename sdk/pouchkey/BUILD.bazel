@@ -1,0 +1,16 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "pouchkey",
+    srcs = ["pouchkey.go"],
+    importpath = "github.com/c16a/pouch/sdk/pouchkey",
+    visibility = ["//visibility:public"],
+    deps = ["@com_github_cloudflare_circl//sign/ed448"],
+)
+
+go_test(
+    name = "test",
+    srcs = ["pouchkey_test.go"],
+    embed = [":pouchkey"],
+    deps = ["@com_github_cloudflare_circl//sign/ed448"],
+)

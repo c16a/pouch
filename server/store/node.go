@@ -387,8 +387,11 @@ func (node *RaftNode) dialPeer(peerAddr string) error {
 		return errors.New("no raft address")
 	}
 
-	joinRequest := commands.NewJoinCommand(node.Config.Cluster.NodeID, node.Config.Cluster.Addr)
-	_, err = conn.Write([]byte(joinRequest))
+	joinRequest, err := commands.NewJoinCommandWithValues(node.Config.Cluster.NodeID, node.Config.Cluster.Addr)
+	if err != nil {
+		return err
+	}
+	_, err = conn.Write([]byte(joinRequest.String()))
 	if err != nil {
 		return err
 	}

@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"errors"
 	"strings"
 )
 
@@ -47,7 +46,7 @@ func ParseStringIntoCommand(s string) (Command, error) {
 	parts := strings.Split(s, " ")
 
 	if len(parts) == 0 {
-		return nil, errors.New("empty command")
+		return nil, ErrEmptyCommand
 	}
 
 	action := parts[0]
@@ -95,6 +94,6 @@ func ParseStringIntoCommand(s string) (Command, error) {
 	case string(SMembers):
 		return NewSMembersCommand(lineMessage)
 	default:
-		return nil, errors.New("invalid command")
+		return nil, ErrInvalidCommand
 	}
 }

@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "client.go",
         "command.go",
+        "errors.go",
         "server.go",
     ],
     importpath = "github.com/c16a/pouch/sdk/commands",

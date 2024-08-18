@@ -1,14 +1,13 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 )
 
 type JoinResponse struct {
-	OK  bool  `json:"ok"`
-	Err error `json:"err"`
+	OK  bool
+	Err error
 }
 
 func (r JoinResponse) String() string {
@@ -17,11 +16,6 @@ func (r JoinResponse) String() string {
 	}
 	return fmt.Sprintf("OK %v", r.OK)
 }
-
-var (
-	ErrorInvalidDataType = errors.New("invalid data type")
-	ErrorNotFound        = errors.New("not found")
-)
 
 type ErrorResponse struct {
 	Err error
@@ -95,9 +89,18 @@ func (a *AuthChallengeRequestCommand) String() string {
 //
 // The underlying store will then add the remote node into its list.
 type JoinCommand struct {
-	NodeId string `json:"nodeId"` // The identifier of the node which is trying to connect to the current node
-	Addr   string `json:"addr"`   // The address at which the remote node is reachable over the Raft network
-	line   string
+	NodeId string // The identifier of the node which is trying to connect to the current node
+	Addr   string // The address at which the remote node is reachable over the Raft network
+	LineMessage
+}
+
+func NewJoinCommand(line LineMessage) (*JoinCommand, error) {
+	parts := strings.Split(line.String(), " ")
+	return &JoinCommand{
+		NodeId:      parts[1],
+		Addr:        parts[2],
+		LineMessage: line,
+	}, nil
 }
 
 func (c *JoinCommand) GetAction() MessageType {
@@ -108,6 +111,10 @@ func (c *JoinCommand) String() string {
 	return fmt.Sprintf("%s %s %s", string(Join), c.NodeId, c.Addr)
 }
 
-func NewJoinCommand(nodeId string, addr string) string {
-	return fmt.Sprintf("%s %s %s", string(Join), nodeId, addr)
+func NewJoinCommandWithValues(nodeId string, addr string) (*JoinCommand, error) {
+	line := LineMessage{
+		Line:        fmt.Sprintf("%s %s %s", string(Join), nodeId, addr),
+		MessageType: Join,
+	}
+	return NewJoinCommand(line)
 }

@@ -14,7 +14,7 @@ func init() {
 
 var genkeypairCmd = &cobra.Command{
 	Use:   "genkeypair",
-	Short: "Creates a new keypair",
+	Short: "Creates a new Ed448 keypair",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		encodedSeed := Seed
 

@@ -4,22 +4,33 @@ import (
 	"bufio"
 	"context"
 	"github.com/c16a/pouch/sdk/commands"
-	"github.com/c16a/pouch/server/env"
 	"github.com/c16a/pouch/server/store"
 	"github.com/quic-go/quic-go"
 	"io"
 	"log"
-	"os"
 	"strings"
 )
 
 func StartQuicListener(node *store.RaftNode) {
-	quicAddr := os.Getenv(env.QuicAddr)
-	if quicAddr == "" {
-		log.Fatalf("Environment variable %s not set", env.QuicAddr)
+	if node.Config.Quic == nil || !node.Config.Quic.Enabled {
+		return
 	}
 
-	listener, err := quic.ListenAddr(quicAddr, nil, nil)
+	quicAddr := node.Config.Quic.Addr
+
+	var listener *quic.Listener
+	var err error
+	tlsConfig, err := GetTlsConfig(node.Config)
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		if tlsConfig != nil {
+			listener, err = quic.ListenAddr(quicAddr, tlsConfig, nil)
+		} else {
+			log.Fatal("cannot start QUIC listener without TLSConfig")
+		}
+	}
+
 	if err != nil {
 		log.Fatal(err)
 	}

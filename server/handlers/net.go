@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bufio"
+	"crypto/tls"
 	"github.com/c16a/pouch/sdk/auth"
 	"github.com/c16a/pouch/sdk/commands"
 	"github.com/c16a/pouch/server/store"
@@ -12,15 +13,30 @@ import (
 )
 
 func StartTcpListener(node *store.RaftNode) {
-	startNetListener(node, "tcp", node.Config.Tcp.Addr)
+	if node.Config.Tcp != nil && node.Config.Tcp.Enabled {
+		startNetListener(node, "tcp", node.Config.Tcp.Addr)
+	}
 }
 
 func StartUnixListener(node *store.RaftNode) {
-	startNetListener(node, "unix", node.Config.Unix.Path)
+	if node.Config.Unix != nil && node.Config.Unix.Enabled {
+		startNetListener(node, "unix", node.Config.Unix.Path)
+	}
 }
 
 func startNetListener(node *store.RaftNode, protocol string, addr string) {
-	listener, err := net.Listen(protocol, addr)
+	var listener net.Listener
+	var err error
+	tlsConfig, err := GetTlsConfig(node.Config)
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		if tlsConfig != nil {
+			listener, err = tls.Listen(protocol, addr, tlsConfig)
+		} else {
+			listener, err = net.Listen(protocol, addr)
+		}
+	}
 	if err != nil {
 		log.Fatal(err)
 	}

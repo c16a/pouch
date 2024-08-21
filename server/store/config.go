@@ -1,14 +1,21 @@
 package store
 
 type NodeConfig struct {
-	Tcp     *Tcp
-	Ws      *Ws
-	Unix    *Unix
-	Auth    *Auth
-	Cluster *Cluster
+	Tcp      *Tcp
+	Ws       *Ws
+	Quic     *Quic
+	Unix     *Unix
+	Auth     *Auth
+	Cluster  *Cluster
+	Security *Security
 }
 
 type Tcp struct {
+	Enabled bool   `json:"enable"`
+	Addr    string `json:"addr"`
+}
+
+type Quic struct {
 	Enabled bool   `json:"enable"`
 	Addr    string `json:"addr"`
 }
@@ -36,4 +43,14 @@ type Auth struct {
 
 type ClientInfo struct {
 	HexPublicKey string `json:"hex_public_key"`
+}
+
+type Security struct {
+	Tls *Tls `json:"tls"`
+}
+
+type Tls struct {
+	Enable       bool   `json:"enable"`
+	CertFilePath string `json:"cert_file_path"`
+	KeyFilePath  string `json:"key_file_path"`
 }

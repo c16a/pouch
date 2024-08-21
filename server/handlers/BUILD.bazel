@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "net.go",
         "quic.go",
+        "utils.go",
         "ws.go",
     ],
     importpath = "github.com/c16a/pouch/server/handlers",

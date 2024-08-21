@@ -10,11 +10,29 @@ import (
 )
 
 func StartWsListener(node *store.RaftNode) {
+	if node.Config.Ws == nil || !node.Config.Ws.Enable {
+		return
+	}
+
 	var upgrader = websocket.Upgrader{}
 	http.Handle("/", handleWsRequest(upgrader, node))
 
+	server := &http.Server{
+		Addr:    node.Config.Ws.Addr,
+		Handler: http.DefaultServeMux,
+	}
+
+	tlsConfig, err := GetTlsConfig(node.Config)
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		if tlsConfig != nil {
+			server.TLSConfig = tlsConfig
+		}
+	}
+
 	go func() {
-		err := http.ListenAndServe(node.Config.Ws.Addr, http.DefaultServeMux)
+		err := server.ListenAndServeTLS("", "")
 		if err != nil {
 			log.Fatal(err)
 		}

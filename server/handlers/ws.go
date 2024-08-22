@@ -10,7 +10,7 @@ import (
 )
 
 func StartWsListener(node *store.RaftNode) {
-	if node.Config.Ws == nil || !node.Config.Ws.Enable {
+	if node.Config.Ws == nil || !node.Config.Ws.Enabled {
 		return
 	}
 
@@ -32,7 +32,7 @@ func StartWsListener(node *store.RaftNode) {
 	}
 
 	go func() {
-		err := server.ListenAndServeTLS("", "")
+		err := server.ListenAndServe()
 		if err != nil {
 			log.Fatal(err)
 		}

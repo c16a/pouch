@@ -29,10 +29,12 @@ func handleTcpLoop(conn net.Conn, clientId string, encodedSeed string) {
 
 	line, err := reader.ReadString('\n')
 	if err != nil {
+		fmt.Println(err)
 		return
 	}
 
 	line = strings.TrimSpace(line)
+	fmt.Println(line)
 	msg, err := commands.ParseStringIntoCommand(line)
 	if err != nil {
 		fmt.Println(err)
@@ -56,6 +58,8 @@ func handleTcpLoop(conn net.Conn, clientId string, encodedSeed string) {
 		}
 		writer.WriteString(authChallengeResponse.String() + "\n")
 		writer.Flush()
+
+		fmt.Println("send challenge")
 	} else {
 		return
 	}

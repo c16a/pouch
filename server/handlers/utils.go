@@ -6,6 +6,9 @@ import (
 )
 
 func GetTlsConfig(config *store.NodeConfig) (*tls.Config, error) {
+	if config.Security == nil {
+		return nil, nil
+	}
 	tlsAppConfig := config.Security.Tls
 	if tlsAppConfig == nil || tlsAppConfig.Enable == false {
 		return nil, nil

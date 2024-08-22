@@ -28,6 +28,12 @@ const (
 	SMembers  MessageType = "SMEMBERS"
 	SUnion    MessageType = "SUNION"
 
+	BFAdd     MessageType = "BF.ADD"     // Adds multiple items to a Bloom Filter. Creates a filter if it doesn't already exist.
+	BFCard    MessageType = "BF.CARD"    // Returns the cardinality of a Bloom Filter.
+	BFExists  MessageType = "BF.EXISTS"  // Checks whether an item exists in a Bloom Filter.
+	BFInfo    MessageType = "BF.INFO"    // Returns information about a Bloom Filter.
+	BFReserve MessageType = "BF.RESERVE" // Creates a new Bloom Filter.
+
 	AuthChallengeResponse MessageType = "AUTH.CHALLENGE.RES"
 	AuthChallengeRequest  MessageType = "AUTH.CHALLENGE.REQ"
 

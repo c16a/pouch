@@ -11,23 +11,23 @@ type NodeConfig struct {
 }
 
 type Tcp struct {
-	Enabled bool   `json:"enable"`
+	Enabled bool   `json:"enabled"`
 	Addr    string `json:"addr"`
 }
 
 type Quic struct {
-	Enabled bool   `json:"enable"`
+	Enabled bool   `json:"enabled"`
 	Addr    string `json:"addr"`
 }
 
 type Unix struct {
-	Enabled bool   `json:"enable"`
+	Enabled bool   `json:"enabled"`
 	Path    string `json:"path"`
 }
 
 type Ws struct {
-	Enable bool   `json:"enable"`
-	Addr   string `json:"addr"`
+	Enabled bool   `json:"enabled"`
+	Addr    string `json:"addr"`
 }
 
 type Cluster struct {

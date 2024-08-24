@@ -248,6 +248,49 @@ func NewSMembersCommand(line LineMessage) (*SMembersCommand, error) {
 	}, nil
 }
 
+type PFAddCommand struct {
+	Key    string
+	Values []string
+	LineMessage
+}
+
+func NewPFAddCommand(line LineMessage) (*PFAddCommand, error) {
+	parts := strings.Split(line.String(), ":")
+	return &PFAddCommand{
+		Key:         parts[1],
+		Values:      parts[2:],
+		LineMessage: line,
+	}, nil
+}
+
+type PFCountCommand struct {
+	Key string
+	LineMessage
+}
+
+func NewPFCountCommand(line LineMessage) (*PFCountCommand, error) {
+	parts := strings.Split(line.String(), " ")
+	return &PFCountCommand{
+		Key:         parts[1],
+		LineMessage: line,
+	}, nil
+}
+
+type PFMergeCommand struct {
+	DestKey    string
+	SourceKeys []string
+	LineMessage
+}
+
+func NewPFMergeCommand(line LineMessage) (*PFMergeCommand, error) {
+	parts := strings.Split(line.String(), ":")
+	return &PFMergeCommand{
+		DestKey:     parts[1],
+		SourceKeys:  parts[2:],
+		LineMessage: line,
+	}, nil
+}
+
 type GetCommand struct {
 	Key string
 	LineMessage

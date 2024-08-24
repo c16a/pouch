@@ -34,6 +34,10 @@ const (
 	BFInfo    MessageType = "BF.INFO"    // Returns information about a Bloom Filter.
 	BFReserve MessageType = "BF.RESERVE" // Creates a new Bloom Filter.
 
+	PFAdd   MessageType = "PFADD"
+	PFCount MessageType = "PFCOUNT"
+	PFMerge MessageType = "PFMERGE"
+
 	AuthChallengeResponse MessageType = "AUTH.CHALLENGE.RES"
 	AuthChallengeRequest  MessageType = "AUTH.CHALLENGE.REQ"
 
@@ -98,6 +102,12 @@ func ParseStringIntoCommand(s string) (Command, error) {
 		return NewSIsMemberCommand(lineMessage)
 	case string(SMembers):
 		return NewSMembersCommand(lineMessage)
+	case string(PFAdd):
+		return NewPFAddCommand(lineMessage)
+	case string(PFCount):
+		return NewPFCountCommand(lineMessage)
+	case string(PFMerge):
+		return NewPFMergeCommand(lineMessage)
 	default:
 		return nil, ErrInvalidCommand
 	}

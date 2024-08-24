@@ -20,11 +20,6 @@ type Element struct {
 }
 
 func (list *List) MarshalJSON() ([]byte, error) {
-	var err error
-	list.Values, err = list.LRange(0, -1)
-	if err != nil {
-		return nil, err
-	}
 	return json.Marshal(list)
 }
 

@@ -87,7 +87,6 @@ func handleTcpLoop(conn net.Conn, clientId string, encodedSeed string) {
 	go func() {
 		stdReader := bufio.NewReader(os.Stdin)
 		for {
-			fmt.Print("pouch-cli> ")
 			line, err := stdReader.ReadString('\n')
 			if err != nil {
 				fmt.Println("Input error:", err)
@@ -102,7 +101,7 @@ func handleTcpLoop(conn net.Conn, clientId string, encodedSeed string) {
 	for {
 		select {
 		case msg := <-serverMessages:
-			fmt.Println("pouch-server> ", msg)
+			fmt.Printf(">%s\n", msg)
 		case msg := <-clientMessages:
 			writer.WriteString(msg + "\n")
 			writer.Flush()

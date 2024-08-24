@@ -255,7 +255,7 @@ type PFAddCommand struct {
 }
 
 func NewPFAddCommand(line LineMessage) (*PFAddCommand, error) {
-	parts := strings.Split(line.String(), ":")
+	parts := strings.Split(line.String(), " ")
 	return &PFAddCommand{
 		Key:         parts[1],
 		Values:      parts[2:],
@@ -283,7 +283,7 @@ type PFMergeCommand struct {
 }
 
 func NewPFMergeCommand(line LineMessage) (*PFMergeCommand, error) {
-	parts := strings.Split(line.String(), ":")
+	parts := strings.Split(line.String(), " ")
 	return &PFMergeCommand{
 		DestKey:     parts[1],
 		SourceKeys:  parts[2:],

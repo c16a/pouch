@@ -165,6 +165,10 @@ func (node *RaftNode) ApplyCmd(cmd commands.Command) string {
 		return node.SDiff(cmd.(*commands.SDiffCommand))
 	case commands.SUnion:
 		return node.SUnion(cmd.(*commands.SUnionCommand))
+	case commands.PFAdd:
+		return node.PFAdd(cmd.(*commands.PFAddCommand))
+	case commands.PFCount:
+		return node.PFCount(cmd.(*commands.PFCountCommand))
 	default:
 		return (&commands.ErrorResponse{Err: commands.ErrInvalidCommand}).String()
 	}
@@ -307,6 +311,8 @@ func (node *RaftNode) Apply(l *raft.Log) interface{} {
 		return node.applyRpop(cmd.(*commands.RPopCommand))
 	case commands.SAdd:
 		return node.applySADD(cmd.(*commands.SAddCommand))
+	case commands.PFAdd:
+		return node.applyPFAdd(cmd.(*commands.PFAddCommand))
 	default:
 		node.logger.Error("unrecognised command", zap.String("type", string(cmd.GetMessageType())))
 		return nil

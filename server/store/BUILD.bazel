@@ -4,6 +4,7 @@ go_library(
     name = "store",
     srcs = [
         "config.go",
+        "hyperloglog.go",
         "lists.go",
         "node.go",
         "peer_join.go",

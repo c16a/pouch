@@ -37,6 +37,11 @@ func TestSet_Add_Remove(t *testing.T) {
 	if set.Size() != 0 {
 		t.Errorf("Set.Size() = %d, want 0", set.Size())
 	}
+
+	set.AddMany([]string{"mango", "banana"})
+	if set.Size() != 2 {
+		t.Errorf("Set.Size() = %d, want 2", set.Size())
+	}
 }
 
 func TestSet_Intersection(t *testing.T) {

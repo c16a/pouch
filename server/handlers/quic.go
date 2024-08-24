@@ -6,13 +6,16 @@ import (
 	"github.com/c16a/pouch/sdk/commands"
 	"github.com/c16a/pouch/server/store"
 	"github.com/quic-go/quic-go"
+	"go.uber.org/zap"
 	"io"
-	"log"
 	"strings"
 )
 
 func StartQuicListener(node *store.RaftNode) {
+	logger := node.GetLogger()
+
 	if node.Config.Quic == nil || !node.Config.Quic.Enabled {
+		logger.Warn("skipping quic listener")
 		return
 	}
 
@@ -22,17 +25,17 @@ func StartQuicListener(node *store.RaftNode) {
 	var err error
 	tlsConfig, err := GetTlsConfig(node.Config)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal("failed to load TLS config", zap.Error(err))
 	} else {
 		if tlsConfig != nil {
 			listener, err = quic.ListenAddr(quicAddr, tlsConfig, nil)
 		} else {
-			log.Fatal("cannot start QUIC listener without TLSConfig")
+			logger.Fatal("cannot start QUIC listener without TLSConfig")
 		}
 	}
 
 	if err != nil {
-		log.Fatal(err)
+		logger.Error("failed to start net listener", zap.String("protocol", "quic"), zap.Error(err))
 	}
 
 	for {

@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/c16a/pouch/sdk/commands"
+	"github.com/c16a/pouch/server/bbolt"
 	"github.com/c16a/pouch/server/datatypes"
 	"github.com/google/uuid"
 	"github.com/hashicorp/raft"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapio"
 	"io"
-	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -37,25 +37,25 @@ type RaftNode struct {
 func NewRaftNode(config *NodeConfig, logger *zap.Logger) *RaftNode {
 	raftPath := config.Cluster.RaftDir
 	if raftPath == "" {
-		log.Fatalf("No raft dir specified")
+		logger.Fatal("no raft dir specified")
 	}
 
 	raftAddr := config.Cluster.Addr
 	if raftAddr == "" {
-		log.Fatalf("No raft addr specified")
+		logger.Fatal("no raft addr specified")
 	}
 
 	nodeId := config.Cluster.NodeID
 	if nodeId == "" {
 		id, err := uuid.NewV7()
 		if err != nil {
-			log.Fatalf("failed to generate node id: %s", err.Error())
+			logger.Fatal("failed to generate node id", zap.Error(err))
 		}
 		config.Cluster.NodeID = id.String()
 	}
 
 	if err := os.MkdirAll(raftPath, 0700); err != nil {
-		log.Fatalf("failed to create path for Raft storage: %s", err.Error())
+		logger.Fatal("failed to create path for Raft storage", zap.Error(err))
 	}
 
 	return &RaftNode{
@@ -65,6 +65,10 @@ func NewRaftNode(config *NodeConfig, logger *zap.Logger) *RaftNode {
 		logger:   logger,
 		Config:   config,
 	}
+}
+
+func (node *RaftNode) GetLogger() *zap.Logger {
+	return node.logger
 }
 
 // Start opens the store. If enableSingle is set, and there are no existing peers,
@@ -94,7 +98,7 @@ func (node *RaftNode) Start() error {
 	}
 
 	// Create the log store and stable store.
-	boltDB, err := NewBoltStore(filepath.Join(node.RaftDir, "raft.db"))
+	boltDB, err := bbolt.NewBoltStore(filepath.Join(node.RaftDir, "raft.db"))
 	if err != nil {
 		return fmt.Errorf("new bbolt store: %s", err)
 	}
@@ -162,7 +166,7 @@ func (node *RaftNode) ApplyCmd(cmd commands.Command) string {
 	case commands.SUnion:
 		return node.SUnion(cmd.(*commands.SUnionCommand))
 	default:
-		return (&commands.ErrorResponse{Err: errors.New("unknown command")}).String()
+		return (&commands.ErrorResponse{Err: commands.ErrInvalidCommand}).String()
 	}
 }
 
@@ -409,7 +413,7 @@ func (node *RaftNode) dialPeer(peerAddr string) error {
 func (node *RaftNode) startPeeringServer() error {
 	peeringPort := node.Config.Cluster.Addr
 	if peeringPort == "" {
-		log.Fatalf("Raft addr not specified")
+		node.logger.Fatal("raft addr not specified")
 	}
 
 	udpAddr, err := net.ResolveUDPAddr("udp", peeringPort)

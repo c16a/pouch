@@ -3,7 +3,6 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "store",
     srcs = [
-        "bbolt.go",
         "config.go",
         "lists.go",
         "node.go",
@@ -11,17 +10,15 @@ go_library(
         "sets.go",
         "snap_shot.go",
         "store.go",
-        "utils.go",
     ],
     importpath = "github.com/c16a/pouch/server/store",
     visibility = ["//visibility:public"],
     deps = [
         "//sdk/commands",
+        "//server/bbolt",
         "//server/datatypes",
         "@com_github_google_uuid//:uuid",
-        "@com_github_hashicorp_go_msgpack_v2//codec",
         "@com_github_hashicorp_raft//:raft",
-        "@io_etcd_go_bbolt//:bbolt",
         "@org_uber_go_zap//:zap",
         "@org_uber_go_zap//zapio",
     ],

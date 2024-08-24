@@ -4,12 +4,15 @@ import (
 	"github.com/c16a/pouch/sdk/commands"
 	"github.com/c16a/pouch/server/store"
 	"github.com/gorilla/websocket"
+	"go.uber.org/zap"
 	"log"
 	"net/http"
 	"strings"
 )
 
 func StartWsListener(node *store.RaftNode) {
+	logger := node.GetLogger()
+
 	if node.Config.Ws == nil || !node.Config.Ws.Enabled {
 		return
 	}
@@ -24,7 +27,7 @@ func StartWsListener(node *store.RaftNode) {
 
 	tlsConfig, err := GetTlsConfig(node.Config)
 	if err != nil {
-		log.Fatal(err)
+		logger.Error("failed to load tls config", zap.Error(err))
 	} else {
 		if tlsConfig != nil {
 			server.TLSConfig = tlsConfig
@@ -34,7 +37,7 @@ func StartWsListener(node *store.RaftNode) {
 	go func() {
 		err := server.ListenAndServe()
 		if err != nil {
-			log.Fatal(err)
+			logger.Error("failed to start http server", zap.Error(err))
 		}
 	}()
 }

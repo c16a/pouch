@@ -1,0 +1,16 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "bbolt",
+    srcs = [
+        "bbolt.go",
+        "utils.go",
+    ],
+    importpath = "github.com/c16a/pouch/server/bbolt",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_hashicorp_go_msgpack_v2//codec",
+        "@com_github_hashicorp_raft//:raft",
+        "@io_etcd_go_bbolt//:bbolt",
+    ],
+)

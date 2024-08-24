@@ -1,4 +1,4 @@
-package store
+package bbolt
 
 import (
 	"errors"
@@ -17,7 +17,7 @@ var (
 	dbLogs = []byte("logs")
 	dbConf = []byte("conf")
 
-	// An error indicating a given key does not exist
+	// ErrKeyNotFound is an error indicating a given key does not exist
 	ErrKeyNotFound = errors.New("not found")
 )
 

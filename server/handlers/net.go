@@ -6,30 +6,39 @@ import (
 	"github.com/c16a/pouch/sdk/auth"
 	"github.com/c16a/pouch/sdk/commands"
 	"github.com/c16a/pouch/server/store"
+	"go.uber.org/zap"
 	"io"
-	"log"
 	"net"
 	"strings"
 )
 
 func StartTcpListener(node *store.RaftNode) {
+	logger := node.GetLogger()
 	if node.Config.Tcp != nil && node.Config.Tcp.Enabled {
 		startNetListener(node, "tcp", node.Config.Tcp.Addr)
+	} else {
+		logger.Warn("skipping TCP listener")
 	}
 }
 
 func StartUnixListener(node *store.RaftNode) {
+	logger := node.GetLogger()
 	if node.Config.Unix != nil && node.Config.Unix.Enabled {
 		startNetListener(node, "unix", node.Config.Unix.Path)
+	} else {
+		logger.Warn("skipping Unix listener")
 	}
 }
 
 func startNetListener(node *store.RaftNode, protocol string, addr string) {
+	logger := node.GetLogger()
+
 	var listener net.Listener
 	var err error
 	tlsConfig, err := GetTlsConfig(node.Config)
 	if err != nil {
-		log.Fatal(err)
+		logger.Error("failed to load TLS config", zap.Error(err))
+		return
 	} else {
 		if tlsConfig != nil {
 			listener, err = tls.Listen(protocol, addr, tlsConfig)
@@ -38,7 +47,8 @@ func startNetListener(node *store.RaftNode, protocol string, addr string) {
 		}
 	}
 	if err != nil {
-		log.Fatal(err)
+		logger.Error("failed to start net listener", zap.String("protocol", protocol), zap.Error(err))
+		return
 	}
 
 	for {

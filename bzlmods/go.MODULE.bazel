@@ -13,4 +13,5 @@ use_repo(
     "com_github_quic_go_quic_go",
     "com_github_cloudflare_circl",
     "com_github_spf13_cobra",
+    "org_uber_go_zap",
 )

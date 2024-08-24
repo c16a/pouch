@@ -8,6 +8,8 @@ import (
 	"github.com/c16a/pouch/server/datatypes"
 	"github.com/google/uuid"
 	"github.com/hashicorp/raft"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapio"
 	"io"
 	"log"
 	"net"
@@ -27,12 +29,12 @@ type RaftNode struct {
 
 	raft *raft.Raft // The consensus mechanism
 
-	logger *log.Logger
+	logger *zap.Logger
 	Config *NodeConfig
 }
 
 // NewRaftNode returns a new RaftNode.
-func NewRaftNode(config *NodeConfig) *RaftNode {
+func NewRaftNode(config *NodeConfig, logger *zap.Logger) *RaftNode {
 	raftPath := config.Cluster.RaftDir
 	if raftPath == "" {
 		log.Fatalf("No raft dir specified")
@@ -60,7 +62,7 @@ func NewRaftNode(config *NodeConfig) *RaftNode {
 		RaftDir:  raftPath,
 		RaftBind: raftAddr,
 		m:        make(map[string]datatypes.Type),
-		logger:   log.New(os.Stderr, "[store] ", log.LstdFlags),
+		logger:   logger,
 		Config:   config,
 	}
 }
@@ -73,18 +75,20 @@ func (node *RaftNode) Start() error {
 	config := raft.DefaultConfig()
 	config.LocalID = raft.ServerID(node.Config.Cluster.NodeID)
 
+	logWriter := &zapio.Writer{Log: node.logger, Level: zap.DebugLevel}
+
 	// Setup Raft communication.
 	addr, err := net.ResolveTCPAddr("tcp", node.RaftBind)
 	if err != nil {
 		return err
 	}
-	transport, err := raft.NewTCPTransport(node.RaftBind, addr, 3, 10*time.Second, os.Stderr)
+	transport, err := raft.NewTCPTransport(node.RaftBind, addr, 3, 10*time.Second, logWriter)
 	if err != nil {
 		return err
 	}
 
 	// Create the snapshot store. This allows the Raft to truncate the log.
-	snapshots, err := raft.NewFileSnapshotStore(node.RaftDir, retainSnapshotCount, os.Stderr)
+	snapshots, err := raft.NewFileSnapshotStore(node.RaftDir, retainSnapshotCount, logWriter)
 	if err != nil {
 		return fmt.Errorf("file snapshot store: %s", err)
 	}
@@ -94,6 +98,7 @@ func (node *RaftNode) Start() error {
 	if err != nil {
 		return fmt.Errorf("new bbolt store: %s", err)
 	}
+	node.logger.Info("initialised logstore and stablestore")
 	logStore := boltDB
 	stableStore := boltDB
 
@@ -238,11 +243,11 @@ func (node *RaftNode) sendToLeaderViaUdp(cmd commands.Command, addr raft.ServerA
 // Join joins a node, identified by nodeID and located at addr, to this store.
 // The node must be ready to respond to Raft communications at that address.
 func (node *RaftNode) Join(nodeID, addr string) error {
-	node.logger.Printf("received join request for remote node %s at %s", nodeID, addr)
+	node.logger.Info("incoming join request", zap.String("node_id", nodeID), zap.String("addr", addr))
 
 	configFuture := node.raft.GetConfiguration()
 	if err := configFuture.Error(); err != nil {
-		node.logger.Printf("failed to get raft configuration: %v", err)
+		node.logger.Error("failed to get raft configuration", zap.Error(err))
 		return err
 	}
 
@@ -253,13 +258,13 @@ func (node *RaftNode) Join(nodeID, addr string) error {
 			// However if *both* the ID and the address are the same, then nothing -- not even
 			// a join operation -- is needed.
 			if srv.Address == raft.ServerAddress(addr) && srv.ID == raft.ServerID(nodeID) {
-				node.logger.Printf("node %s at %s already member of cluster, ignoring join request", nodeID, addr)
+				node.logger.Info("remote node already member of cluster, ignoring join request", zap.String("node_id", nodeID), zap.String("addr", addr))
 				return nil
 			}
 
 			future := node.raft.RemoveServer(srv.ID, 0, 0)
 			if err := future.Error(); err != nil {
-				return fmt.Errorf("error removing existing node %s at %s: %s", nodeID, addr, err)
+				return fmt.Errorf("error removing existing peer node", zap.String("node_id", nodeID), zap.String("addr", addr), zap.Error(err))
 			}
 		}
 	}
@@ -268,7 +273,7 @@ func (node *RaftNode) Join(nodeID, addr string) error {
 	if f.Error() != nil {
 		return f.Error()
 	}
-	node.logger.Printf("node %s at %s joined successfully", nodeID, addr)
+	node.logger.Info("peer node joined successfully", zap.String("node_id", nodeID), zap.String("addr", addr))
 	return nil
 }
 
@@ -299,7 +304,8 @@ func (node *RaftNode) Apply(l *raft.Log) interface{} {
 	case commands.SAdd:
 		return node.applySADD(cmd.(*commands.SAddCommand))
 	default:
-		panic(fmt.Sprintf("unrecognized command op: %s", cmd.GetMessageType()))
+		node.logger.Error("unrecognised command", zap.String("type", string(cmd.GetMessageType())))
+		return nil
 	}
 }
 
@@ -361,7 +367,7 @@ func (node *RaftNode) initPeer() {
 		if peerAddr != "" {
 			err := node.dialPeer(peerAddr)
 			if err != nil {
-				fmt.Println("Failed to dial peer:", err)
+				node.logger.Error("failed to dial peer", zap.Error(err))
 			}
 		}
 	}
@@ -447,7 +453,7 @@ func handlePeerLog(buf []byte, n int, node *RaftNode, conn *net.UDPConn, addr *n
 
 	defer func() {
 		if _, err := conn.WriteToUDP([]byte(strResponse), addr); err != nil {
-			fmt.Println("Failed to write log response:", err)
+			node.logger.Error("failed to write log response", zap.Error(err))
 		}
 	}()
 

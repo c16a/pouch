@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/c16a/pouch/sdk/commands"
+	"go.uber.org/zap"
 	"net"
 )
 
@@ -15,11 +16,11 @@ func handlePeerJoin(buf []byte, n int, s *RaftNode, conn *net.UDPConn, addr *net
 	defer func() {
 		responseBytes, err := json.Marshal(joinResponse)
 		if err != nil {
-			fmt.Println("Failed to marshal join response:", err)
+			s.logger.Error("failed to marshal join response", zap.Error(err))
 		}
 
 		if _, err := conn.WriteToUDP(responseBytes, addr); err != nil {
-			fmt.Println("Failed to write join response:", err)
+			s.logger.Error("failed to write join response", zap.Error(err))
 		}
 	}()
 

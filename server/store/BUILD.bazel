@@ -22,5 +22,7 @@ go_library(
         "@com_github_hashicorp_go_msgpack_v2//codec",
         "@com_github_hashicorp_raft//:raft",
         "@io_etcd_go_bbolt//:bbolt",
+        "@org_uber_go_zap//:zap",
+        "@org_uber_go_zap//zapio",
     ],
 )

@@ -27,6 +27,7 @@ func handleTcpLoop(conn net.Conn, clientId string, encodedSeed string) {
 	reader := bufio.NewReader(conn)
 	writer := bufio.NewWriter(conn)
 
+	// Authentication handling as in your code
 	line, err := reader.ReadString('\n')
 	if err != nil {
 		fmt.Println(err)
@@ -34,7 +35,6 @@ func handleTcpLoop(conn net.Conn, clientId string, encodedSeed string) {
 	}
 
 	line = strings.TrimSpace(line)
-	fmt.Println(line)
 	msg, err := commands.ParseStringIntoCommand(line)
 	if err != nil {
 		fmt.Println(err)
@@ -58,33 +58,57 @@ func handleTcpLoop(conn net.Conn, clientId string, encodedSeed string) {
 		}
 		writer.WriteString(authChallengeResponse.String() + "\n")
 		writer.Flush()
-
-		fmt.Println("send challenge")
 	} else {
 		return
 	}
 
-	stdReader := bufio.NewReader(os.Stdin)
+	// Create channels to handle communication between goroutines
+	done := make(chan struct{})
+	serverMessages := make(chan string)
+	clientMessages := make(chan string)
 
-	for {
-		line, err = stdReader.ReadString('\n')
-		if err != nil {
-			continue
-		}
-
-		line = strings.TrimSpace(line)
-		writer.WriteString(line + "\n")
-		writer.Flush()
-
-		serverLine, err := reader.ReadString('\n')
-		if err != nil {
-			if err != io.EOF {
-				break
+	// Goroutine to handle reading from the server
+	go func() {
+		for {
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				if err != io.EOF {
+					fmt.Println("Server error:", err)
+				}
+				close(done)
+				return
 			}
-			continue
+			line = strings.TrimSpace(line)
+			serverMessages <- line
 		}
+	}()
 
-		serverLine = strings.TrimSpace(serverLine)
-		fmt.Println(serverLine)
+	// Goroutine to handle reading from the standard input
+	go func() {
+		stdReader := bufio.NewReader(os.Stdin)
+		for {
+			fmt.Print("pouch-cli> ")
+			line, err := stdReader.ReadString('\n')
+			if err != nil {
+				fmt.Println("Input error:", err)
+				continue
+			}
+			line = strings.TrimSpace(line)
+			clientMessages <- line
+		}
+	}()
+
+	// Main loop to handle messages from both server and stdin
+	for {
+		select {
+		case msg := <-serverMessages:
+			fmt.Println("pouch-server> ", msg)
+		case msg := <-clientMessages:
+			writer.WriteString(msg + "\n")
+			writer.Flush()
+		case <-done:
+			fmt.Println("Connection closed by server.")
+			return
+		}
 	}
 }

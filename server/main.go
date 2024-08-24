@@ -2,9 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/c16a/pouch/sdk/logging"
 	"github.com/c16a/pouch/server/env"
 	"github.com/c16a/pouch/server/handlers"
 	"github.com/c16a/pouch/server/store"
+	"go.uber.org/zap"
 	"io"
 	"log"
 	"os"
@@ -12,19 +14,24 @@ import (
 )
 
 func main() {
+	logger, err := logging.SetupLogger()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	configPath := os.Getenv(env.ConfigFilePath)
 	if configPath == "" {
-		panic("config file path is empty")
+		logger.Fatal("config file path is empty")
 	}
 
 	config, err := scanConfigFile[store.NodeConfig](configPath)
 	if err != nil {
-		panic(err)
+		logger.Fatal("error reading config file", zap.Error(err))
 	}
 
-	node := store.NewRaftNode(config)
+	node := store.NewRaftNode(config, logger)
 	if err := node.Start(); err != nil {
-		log.Fatalf("failed to start node: %s", err.Error())
+		logger.Fatal("error starting node", zap.Error(err))
 	}
 
 	go handlers.StartTcpListener(node)
@@ -34,7 +41,7 @@ func main() {
 	terminate := make(chan os.Signal, 1)
 	signal.Notify(terminate, os.Interrupt, os.Kill)
 	<-terminate
-	log.Println("pouch exiting")
+	logger.Info("pouch exiting")
 }
 
 func scanConfigFile[T any](path string) (*T, error) {

@@ -13,7 +13,6 @@ go_library(
     deps = [
         "//sdk/auth",
         "//sdk/commands",
-        "//server/env",
         "//server/store",
         "@com_github_gorilla_websocket//:websocket",
         "@com_github_quic_go_quic_go//:quic-go",

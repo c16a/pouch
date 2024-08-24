@@ -8,9 +8,11 @@ go_library(
     importpath = "github.com/c16a/pouch/server",
     visibility = ["//visibility:private"],
     deps = [
+        "//sdk/logging",
         "//server/env",
         "//server/handlers",
         "//server/store",
+        "@org_uber_go_zap//:zap",
     ],
 )
 

@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "bbolt",
@@ -13,4 +13,9 @@ go_library(
         "@com_github_hashicorp_raft//:raft",
         "@io_etcd_go_bbolt//:bbolt",
     ],
+)
+
+go_test(
+    name = "test",
+    embed = [":bbolt"],
 )

@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "commands",
@@ -10,4 +10,9 @@ go_library(
     ],
     importpath = "github.com/c16a/pouch/sdk/commands",
     visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "test",
+    embed = [":commands"],
 )

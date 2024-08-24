@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "store",
@@ -22,4 +22,9 @@ go_library(
         "@org_uber_go_zap//:zap",
         "@org_uber_go_zap//zapio",
     ],
+)
+
+go_test(
+    name = "test",
+    embed = [":store"],
 )

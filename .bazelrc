@@ -5,3 +5,4 @@ build --cxxopt=-std=c++17 --host_cxxopt=-std=c++17
 build --javacopt="-XepDisableAllChecks"
 test --test_tag_filters=-integration
 build --test_tag_filters=integration
+coverage --combined_report=lcov

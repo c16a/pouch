@@ -30,6 +30,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run tests
         run: bazelisk test //...
+      - name: Calculate coverage
+        run: bazelisk coverage //...
   build:
     name: Build
     runs-on: ubuntu-latest

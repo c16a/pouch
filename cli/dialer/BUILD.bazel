@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "dialer",
@@ -9,4 +9,9 @@ go_library(
         "//sdk/commands",
         "//sdk/pouchkey",
     ],
+)
+
+go_test(
+    name = "test",
+    embed = [":dialer"],
 )

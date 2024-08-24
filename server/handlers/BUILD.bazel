@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "handlers",
@@ -18,4 +18,9 @@ go_library(
         "@com_github_quic_go_quic_go//:quic-go",
         "@org_uber_go_zap//:zap",
     ],
+)
+
+go_test(
+    name = "test",
+    embed = [":handlers"],
 )
